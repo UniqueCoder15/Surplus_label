@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Production build artifacts
+dist/
+
+# Environment configuration & secrets (NEVER commit secrets to Git)
+.env
+.env.*
+!.env.example
+*.local
+
+# System & OS artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# AI-Agent & IDE workflow artifacts
+.agents/
+skills-lock.json
+
+# Logs & debugging outputs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files & test coverage
+*.tmp
+*.tmp.*
+.cache/
+coverage/
+
+# Tesseract OCR language cache (downloaded on-demand by Tesseract.js)
+*.traineddata

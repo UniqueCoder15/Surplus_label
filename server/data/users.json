@@ -1,0 +1,53 @@
+[
+  {
+    "id": "usr_demo_donor_01",
+    "email": "donor@greenmarket.org",
+    "passwordHash": "$2b$10$37tOfnHP4D78E1EXXH5QAuEOV454Hd6jenMx3xtqTqMzyhZ2UDGa.",
+    "role": "donor",
+    "organizationName": "GreenMarket Community Co-op",
+    "contactName": "Elena Rostova",
+    "phone": "+1 (555) 234-5678",
+    "address": "Central Distribution Bay 3, Sector 4",
+    "isDemo": true,
+    "createdAt": "2026-10-23T19:59:57.775Z",
+    "updatedAt": "2026-10-23T19:59:57.775Z"
+  },
+  {
+    "id": "usr_demo_recipient_01",
+    "email": "rescue@foodpantry.org",
+    "passwordHash": "$2b$10$37tOfnHP4D78E1EXXH5QAuEOV454Hd6jenMx3xtqTqMzyhZ2UDGa.",
+    "role": "recipient",
+    "organizationName": "Hope Community Food Pantry",
+    "contactName": "David Kalu",
+    "phone": "+1 (555) 876-5432",
+    "address": "742 Community Way, West District",
+    "isDemo": true,
+    "createdAt": "2026-10-23T19:59:57.775Z",
+    "updatedAt": "2026-10-23T19:59:57.775Z"
+  },
+  {
+    "id": "usr_demo_admin_01",
+    "email": "admin@surpluslabel.org",
+    "passwordHash": "$2b$10$37tOfnHP4D78E1EXXH5QAuEOV454Hd6jenMx3xtqTqMzyhZ2UDGa.",
+    "role": "admin",
+    "organizationName": "SurplusLabel Platform Oversight",
+    "contactName": "System Administrator",
+    "phone": "+1 (555) 999-0000",
+    "address": "SurplusLabel Operations Command Center",
+    "isDemo": true,
+    "createdAt": "2026-10-23T19:59:57.775Z",
+    "updatedAt": "2026-10-23T19:59:57.775Z"
+  },
+  {
+    "id": "usr_1792785597998_xacx7",
+    "email": "pantry2@communityrescue.org",
+    "passwordHash": "$2b$10$SzHcoHedSlpndgVmrHWeauWXIIf5L8mzV8N3Xj2JjTPn7.oh03HLq",
+    "role": "recipient",
+    "organizationName": "Second Chance Pantry",
+    "contactName": "Sarah Jenkins",
+    "phone": "+1 (555) 333-4444",
+    "isDemo": false,
+    "createdAt": "2026-10-23T19:59:57.998Z",
+    "updatedAt": "2026-10-23T19:59:57.998Z"
+  }
+]

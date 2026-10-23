@@ -1,0 +1,214 @@
+/* ==========================================================================
+   SurplusLabel Design System — Global Tokens & Stylesheet
+   Based on docs/design-system/design-tokens.md and WCAG 2.2 Level AA
+   ========================================================================== */
+
+:root {
+  /* 1. Color Palette: Primary Emerald Scale */
+  --sl-color-primary-50: #ECFDF5;
+  --sl-color-primary-100: #D1FAE5;
+  --sl-color-primary-200: #A7F3D0;
+  --sl-color-primary-500: #10B981;
+  --sl-color-primary-600: #059669; /* Core Emerald: AA Large Text & UI */
+  --sl-color-primary-700: #047857; /* Focus, Active, AA Normal Text (5.48:1) */
+  --sl-color-primary-800: #065F46; /* High-contrast verified text (7.68:1) */
+  --sl-color-primary-900: #064E3B;
+  --sl-color-on-primary: #FFFFFF;
+
+  /* 2. Secondary Brand: Deep Structural Teal */
+  --sl-color-secondary-50: #F0FDFA;
+  --sl-color-secondary-100: #CCFBF1;
+  --sl-color-secondary-200: #99F6E4;
+  --sl-color-secondary-600: #0D9488;
+  --sl-color-secondary-700: #0F766E; /* Core Secondary (5.47:1) */
+  --sl-color-secondary-800: #115E59;
+  --sl-color-on-secondary: #FFFFFF;
+
+  /* 3. Urgency & Operational Status Scales */
+  /* Critical Urgency (<6h) */
+  --sl-color-danger-50: #FEF2F2;
+  --sl-color-danger-100: #FEE2E2;
+  --sl-color-danger-200: #FECACA;
+  --sl-color-danger-600: #DC2626;
+  --sl-color-danger-700: #B91C1C;
+  --sl-color-danger-800: #991B1B; /* Text on 50 bg: 7.60:1 */
+  --sl-color-on-danger: #FFFFFF;
+
+  /* Impending Urgency (<24h) */
+  --sl-color-warning-50: #FFFBEB;
+  --sl-color-warning-100: #FEF3C7;
+  --sl-color-warning-200: #FDE68A;
+  --sl-color-warning-600: #D97706;
+  --sl-color-warning-700: #B45309; /* Normal text on white: 5.02:1 */
+  --sl-color-warning-800: #92400E; /* Text on 50 bg: 6.84:1 */
+  --sl-color-on-warning: #FFFFFF;
+
+  /* Safe / Stable (>24h) */
+  --sl-color-success-50: #ECFDF5;
+  --sl-color-success-200: #A7F3D0;
+  --sl-color-success-600: #059669;
+  --sl-color-success-700: #047857;
+  --sl-color-success-800: #065F46;
+
+  /* Information & Telemetry */
+  --sl-color-info-50: #EFF6FF;
+  --sl-color-info-200: #BFDBFE;
+  --sl-color-info-600: #2563EB;
+  --sl-color-info-800: #1E40AF;
+
+  /* 4. Neutral Canvas & Surfaces */
+  --sl-color-bg-page: #FBFDFB;
+  --sl-color-surface-card: #FFFFFF;
+  --sl-color-surface-subtle: #F1F5F9;
+  --sl-color-surface-hover: #E2E8F0;
+  --sl-color-border-subtle: #F1F5F9;
+  --sl-color-border-default: #E2E8F0;
+  --sl-color-border-hover: #CBD5E1;
+  --sl-color-border-focus: #047857;
+
+  /* 5. Typography Colors */
+  --sl-color-text-primary: #0F172A;   /* 17.85:1 on White */
+  --sl-color-text-secondary: #334155; /* 10.35:1 on White */
+  --sl-color-text-muted: #64748B;     /* 4.76:1 on White */
+  --sl-color-text-disabled: #94A3B8;
+  --sl-color-text-inverse: #FFFFFF;
+
+  /* 6. Focus & Interaction */
+  --sl-color-focus-ring: rgba(5, 150, 105, 0.4);
+  --sl-disabled-opacity: 0.55;
+
+  /* 7. Spacing Scale */
+  --sl-space-1: 4px;
+  --sl-space-2: 8px;
+  --sl-space-3: 12px;
+  --sl-space-4: 16px;
+  --sl-space-5: 20px;
+  --sl-space-6: 24px;
+  --sl-space-8: 32px;
+  --sl-space-10: 40px;
+  --sl-space-12: 48px;
+  --sl-space-16: 64px;
+  --sl-space-20: 80px;
+
+  /* 8. Container Layout Widths */
+  --sl-width-landing-max: 1200px;
+  --sl-width-dashboard-max: 1440px;
+  --sl-width-modal-max: 560px;
+  --sl-width-form-max: 640px;
+
+  /* 9. Border Radii */
+  --sl-radius-xs: 4px;
+  --sl-radius-sm: 6px;
+  --sl-radius-md: 8px;
+  --sl-radius-lg: 12px;
+  --sl-radius-xl: 16px;
+  --sl-radius-full: 9999px;
+
+  /* 10. Shadows */
+  --sl-shadow-none: none;
+  --sl-shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --sl-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --sl-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.03);
+  --sl-shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+
+  /* 11. Motion Timing & Easing */
+  --sl-duration-instant: 100ms;
+  --sl-duration-fast: 150ms;
+  --sl-duration-normal: 200ms;
+  --sl-duration-panel: 250ms;
+  --sl-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --sl-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================================================
+   Base & Reset Styles
+   ========================================================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: var(--sl-color-text-primary);
+  background-color: var(--sl-color-bg-page);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* Accessible Selection */
+::selection {
+  background-color: var(--sl-color-primary-100);
+  color: var(--sl-color-primary-900);
+}
+
+/* Accessible Focus Styling */
+:focus-visible {
+  outline: 2px solid var(--sl-color-primary-700);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px var(--sl-color-focus-ring);
+}
+
+/* Tabular Numerals for Metrics & Dates */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom Clean Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--sl-color-bg-page);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--sl-color-border-hover);
+  border-radius: var(--sl-radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sl-color-text-muted);
+}
+
+/* Skip to Content for Screen Readers */
+.skip-to-content {
+  position: absolute;
+  top: -100px;
+  left: 16px;
+  background: var(--sl-color-primary-700);
+  color: var(--sl-color-on-primary);
+  padding: 8px 16px;
+  border-radius: var(--sl-radius-md);
+  font-weight: 600;
+  z-index: 9999;
+  transition: top 150ms ease;
+  text-decoration: none;
+}
+.skip-to-content:focus {
+  top: 16px;
+}
+
+/* ==========================================================================
+   Reduced Motion Overrides
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

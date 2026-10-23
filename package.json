@@ -1,0 +1,51 @@
+{
+  "name": "surplus-label",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "tsx server/index.ts",
+    "dev": "vite",
+    "server": "tsx server/index.ts",
+    "server:dev": "tsx watch server/index.ts",
+    "dev:all": "concurrently -n \"web,api\" -c \"emerald,cyan\" \"npm run dev\" \"npm run server:dev\"",
+    "build": "tsc && vite build",
+    "typecheck:server": "tsc -p server/tsconfig.json",
+    "test": "tsx server/tests/dateParser.test.ts && tsx server/tests/ocrApi.test.ts && tsx server/tests/listingsApi.test.ts && tsx server/tests/authAndOwnership.test.ts && tsx server/tests/reservationRegression.test.ts",
+    "test:reservation": "tsx server/tests/reservationRegression.test.ts",
+    "test:auth": "tsx server/tests/authAndOwnership.test.ts",
+    "test:listings": "tsx server/tests/listingsApi.test.ts",
+    "test:unit": "tsx server/tests/dateParser.test.ts",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.8",
+    "express": "^5.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^1.16.0",
+    "motion": "^12.4.7",
+    "multer": "^2.5.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tesseract.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.3.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^10.0.6",
+    "tsx": "^4.23.15",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0"
+  }
+}
