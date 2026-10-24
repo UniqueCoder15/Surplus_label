@@ -14,7 +14,7 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onOpenDemo, onNavigateToInve
           <div className="sl-final-cta__content">
             <div className="sl-badge sl-badge--primary sl-final-cta__pill">
               <Sparkles size={14} className="sl-badge__icon" aria-hidden="true" />
-              <span>AI Engineering Exhibition 2026</span>
+              <span>HackerBest 2026 • AI Food Rescue</span>
             </div>
 
             <h2 id="cta-heading" className="sl-final-cta__title">
@@ -22,8 +22,8 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onOpenDemo, onNavigateToInve
             </h2>
 
             <p className="sl-final-cta__desc">
-              Experience the working SurplusLabel prototype. Test image label uploading,
-              OCR date extraction simulation, urgency triage feeds, and transparent pickup handovers.
+              Experience the SurplusLabel platform. Upload package labels,
+              benefit from automatic OCR date extraction, urgency triage feeds, and transparent pickup handovers.
             </p>
 
             <div className="sl-final-cta__actions">

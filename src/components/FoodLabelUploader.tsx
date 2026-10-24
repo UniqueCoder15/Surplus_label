@@ -319,7 +319,7 @@ export const FoodLabelUploader: React.FC<FoodLabelUploaderProps> = ({
           </div>
 
           <div className="sl-dropzone-samples">
-            <span className="sl-dropzone-samples__label">Quick Exhibition Label Presets:</span>
+            <span className="sl-dropzone-samples__label">Quick Sample Label Presets:</span>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <button
                 type="button"

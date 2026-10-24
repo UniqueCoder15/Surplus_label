@@ -31,6 +31,9 @@ export interface IListingDocument extends Document {
   imagePublicId?: string;
   relevantDate: string;
   dateType: DateType;
+  manufacturingDate?: string;
+  expiryDate?: string;
+  batchNumber?: string;
   isManuallyConfirmed: boolean;
   verifiedBy?: string;
   verifiedAt?: string;
@@ -144,6 +147,18 @@ const ListingSchema = new Schema<IListingDocument>(
       type: String,
       required: true,
       enum: ['expiry', 'best_before', 'use_by', 'packaging', 'manufacturing'],
+    },
+    manufacturingDate: {
+      type: String,
+      trim: true,
+    },
+    expiryDate: {
+      type: String,
+      trim: true,
+    },
+    batchNumber: {
+      type: String,
+      trim: true,
     },
     isManuallyConfirmed: {
       type: Boolean,

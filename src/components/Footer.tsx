@@ -1,4 +1,4 @@
-import { Sprout } from 'lucide-react';
+
 
 interface FooterProps {
   onOpenDemo: (role?: 'donor' | 'recipient') => void;
@@ -12,17 +12,18 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDemo }) => {
           {/* Brand Col */}
           <div className="sl-footer__brand-col">
             <div className="sl-brand">
-              <span className="sl-brand__icon-box">
-                <Sprout size={22} className="sl-brand__icon" aria-hidden="true" />
-              </span>
-              <span className="sl-brand__name">SurplusLabel</span>
+              <img
+                src="/logo.png"
+                alt="SurplusLabel — Good Food. Less Waste."
+                className="sl-footer-logo-img"
+              />
             </div>
             <p className="sl-footer__tagline">
               Smart surplus food management and donation coordination.
               Pairing computer vision date extraction with human verification to eliminate edible food waste.
             </p>
-            <div className="sl-footer__exhibition-tag">
-              <span>University AI Engineering Exhibition 2026 Showcase</span>
+            <div className="sl-footer__event-tag">
+              <span>HackerBest 2026 • Verified Community Food Rescue</span>
             </div>
           </div>
 

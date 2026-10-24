@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sprout, Bell, Menu, X } from 'lucide-react';
+import { Bell, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface AppHeaderProps {
@@ -288,9 +288,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           onClick={() => onNavigate('landing')}
           role="button"
           tabIndex={0}
+          aria-label="SurplusLabel Home"
         >
-          <Sprout className="sl-header-logo-icon-ref" size={22} />
-          <span className="sl-header-logo-title-ref">SurplusLabel</span>
+          <picture>
+            <source media="(max-width: 640px)" srcSet="/logo-compact.png" />
+            <img
+              src="/logo.png"
+              alt="SurplusLabel — Good Food. Less Waste."
+              className="sl-header-logo-img-ref"
+            />
+          </picture>
         </div>
 
         {/* Center Nav for Desktop */}

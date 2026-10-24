@@ -51,6 +51,9 @@ export interface FoodListing {
   imagePublicId?: string;
   relevantDate: string;
   dateType: DateType;
+  manufacturingDate?: string;
+  expiryDate?: string;
+  batchNumber?: string;
   isManuallyConfirmed: boolean;
   verifiedBy?: string;
   verifiedAt?: string;
@@ -83,6 +86,9 @@ export interface CreateListingInput {
   imagePublicId?: string;
   relevantDate: string;
   dateType: DateType;
+  manufacturingDate?: string;
+  expiryDate?: string;
+  batchNumber?: string;
   isManuallyConfirmed: boolean;
   verifiedBy: string;
   rawOcrText?: string;
@@ -332,6 +338,12 @@ class ListingStore {
     if (!validateDateString(input.relevantDate)) {
       throw new Error(`Invalid calendar date: "${input.relevantDate}". Must be YYYY-MM-DD.`);
     }
+    if (input.manufacturingDate && !validateDateString(input.manufacturingDate)) {
+      throw new Error(`Invalid manufacturing date: "${input.manufacturingDate}". Must be YYYY-MM-DD.`);
+    }
+    if (input.expiryDate && !validateDateString(input.expiryDate)) {
+      throw new Error(`Invalid expiry date: "${input.expiryDate}". Must be YYYY-MM-DD.`);
+    }
     if (!input.isManuallyConfirmed) {
       throw new Error(
         'Human supervisor verification sign-off is mandatory. Food listings cannot be published from unconfirmed OCR output.'
@@ -366,6 +378,9 @@ class ListingStore {
       imagePublicId: input.imagePublicId,
       relevantDate: input.relevantDate,
       dateType: input.dateType,
+      manufacturingDate: input.manufacturingDate ? input.manufacturingDate.trim() : undefined,
+      expiryDate: input.expiryDate ? input.expiryDate.trim() : undefined,
+      batchNumber: input.batchNumber ? input.batchNumber.trim() : undefined,
       isManuallyConfirmed: true,
       verifiedBy: input.verifiedBy.trim(),
       verifiedAt: now,

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { AppHeader } from './components/AppHeader';
-import { ReferenceScreenSwitcher } from './components/ReferenceScreenSwitcher';
 import { LandingScreen } from './screens/LandingScreen';
 import { AuthScreen } from './screens/AuthScreen';
 import { DonorDashboardScreen } from './screens/DonorDashboardScreen';
@@ -23,7 +22,7 @@ export const AppContent: React.FC = () => {
   const [claimingListing, setClaimingListing] = useState<FoodListing | null>(null);
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
 
-  // Exhibition interactive demo modal
+  // Interactive demo modal
   const [isDemoOpen, setIsDemoOpen] = useState(false);
   const [demoRole, setDemoRole] = useState<'donor' | 'recipient' | 'coordinator'>('donor');
   const [donorMode, setDonorMode] = useState<'upload' | 'simulate'>('simulate');
@@ -169,11 +168,6 @@ export const AppContent: React.FC = () => {
         )}
       </main>
 
-      {/* Bottom Floating Reference Screen Switcher for Immediate Evaluation */}
-      <ReferenceScreenSwitcher
-        currentScreen={currentScreen}
-        onNavigate={handleNavigate}
-      />
 
       {/* Claim Donation Modal */}
       <ClaimDonationModal
@@ -186,7 +180,7 @@ export const AppContent: React.FC = () => {
         onClaimSuccess={handleClaimSuccess}
       />
 
-      {/* Interactive Exhibition Demo Walkthrough Modal */}
+      {/* Interactive Demo Walkthrough Modal */}
       <DemoModal
         isOpen={isDemoOpen}
         onClose={() => setIsDemoOpen(false)}

@@ -46,7 +46,7 @@ export interface AuthTokenPayload {
 }
 
 const JWT_SECRET =
-  process.env.JWT_SECRET || 'surpluslabel_secure_jwt_secret_key_2026_exhibition_f8a9e2d1';
+  process.env.JWT_SECRET || 'surpluslabel_secure_jwt_secret_key_2026_prod_f8a9e2d1';
 
 interface RateLimitRecord {
   attempts: number;

@@ -67,7 +67,7 @@ export const Impact: React.FC = () => {
                 <div className="sl-impact-card__val tabular-nums">{item.value}</div>
                 <div className="sl-impact-card__label">{item.label}</div>
                 <div className="sl-impact-card__sub">{item.sub}</div>
-                <span className="sl-impact-card__tag">*Exhibition Demo Data</span>
+                <span className="sl-impact-card__tag">*Estimated Platform Impact</span>
               </div>
             );
           })}

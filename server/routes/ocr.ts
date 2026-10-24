@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { uploadMiddleware, validateImageSignature } from '../middleware/upload';
 import { ocrEngine } from '../ocr/engine';
+import { extractLabelInsights } from '../services/dateParser';
 
 const router = Router();
 
@@ -20,11 +21,11 @@ router.get('/status', async (_req: Request, res: Response) => {
 
 /**
  * Dedicated Food-Label OCR Endpoint
- * POST /api/ocr/food-label
+ * POST /api/ocr/food-label or POST /api/ocr/scan-label
  * Field name: 'image'
  */
 router.post(
-  ['/food-label', '/'],
+  ['/food-label', '/scan-label', '/'],
   (req: Request, res: Response, next: NextFunction) => {
     uploadMiddleware.single('image')(req, res, (err: any) => {
       if (err) {
@@ -71,12 +72,42 @@ router.post(
         file.originalname
       );
 
+      // Compute structured date insights (MFG, EXP, Best Before, Batch #)
+      const insights = extractLabelInsights(
+        ocrResult.rawText,
+        ocrResult.candidates,
+        ocrResult.confidence
+      );
+
+      const bestCandidate = ocrResult.candidates.find(
+        (c) => c.dateType === 'expiry' || c.dateType === 'use_by'
+      ) || ocrResult.candidates.find((c) => c.dateType === 'best_before') || ocrResult.candidates[0] || null;
+
       res.status(200).json({
         success: true,
         data: {
           rawText: ocrResult.rawText,
           confidence: ocrResult.confidence,
+          confidenceScore: ocrResult.confidence,
           candidates: ocrResult.candidates,
+          insights,
+          manufacturingDate: insights.manufacturingDate,
+          expiryDate: insights.expiryDate,
+          bestBeforeDate: insights.bestBeforeDate,
+          batchNumber: insights.batchNumber,
+          primaryDate: insights.primaryDate,
+          detectedDateType: insights.detectedDateType,
+          status: insights.status,
+          statusText: insights.statusText,
+          statusBadge: insights.statusBadge,
+          message: insights.message,
+          bestDateCandidate: bestCandidate
+            ? {
+                isoDate: bestCandidate.normalizedDate,
+                dateType: bestCandidate.dateType,
+                displayDate: bestCandidate.displayDate,
+              }
+            : null,
           processingTimeMs: ocrResult.processingTimeMs,
           fileInfo: {
             originalName: file.originalname,
@@ -92,7 +123,7 @@ router.post(
         success: false,
         error:
           err?.message ||
-          'Failed to process food label OCR. Please try again or enter dates manually.',
+          'Failed to process food label OCR. Please try again with a clear photo of the packaging label.',
       });
     }
   }

@@ -601,3 +601,172 @@ export function calculateUrgency(
     canDriveUrgency: true,
   };
 }
+
+export interface StructuredDateInsights {
+  rawText: string;
+  ocrConfidence: number;
+  manufacturingDate: string | null;
+  expiryDate: string | null;
+  bestBeforeDate: string | null;
+  batchNumber: string | null;
+  detectedDateType: DateType;
+  primaryDate: string | null;
+  status: 'detected' | 'mfg_only' | 'not_detected';
+  statusBadge: 'success' | 'warning' | 'danger';
+  statusText: string;
+  message: string;
+  candidates: DateCandidate[];
+}
+
+/**
+ * Extracts batch or lot identification numbers from packaging text.
+ */
+export function extractBatchNumber(rawText: string): string | null {
+  if (!rawText || typeof rawText !== 'string') return null;
+
+  const patterns = [
+    /\b(?:BATCH|LOT|B\.?\s*NO|LOT\s*#|BN)\s*(?:NO\.?|NUM\.?|NUMBER)?\s*[:.\-#]?\s*([A-Za-z0-9\-_/]{2,20})\b/i,
+    /\b(?:LOT|BATCH)\s*[:.\-#]?\s*([A-Za-z0-9\-_/]{2,20})\b/i,
+  ];
+
+  for (const pat of patterns) {
+    const match = rawText.match(pat);
+    if (match && match[1]) {
+      const candidate = match[1].trim();
+      if (
+        !/^\d{4}$/.test(candidate) &&
+        !/^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$/.test(candidate) &&
+        !/^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)$/i.test(candidate)
+      ) {
+        return candidate;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extracts structured date insights across manufacturing, expiry, best-before, and batch number.
+ * Ensures zero fabrication: unreadable labels produce 'not_detected' instead of dummy dates.
+ */
+export function extractLabelInsights(
+  rawText: string,
+  candidates: DateCandidate[],
+  ocrConfidence = 80
+): StructuredDateInsights {
+  const batchNumber = extractBatchNumber(rawText);
+
+  // Group candidates by date type
+  const expiryCands = candidates.filter(
+    (c) => c.dateType === 'expiry' || c.dateType === 'use_by'
+  );
+  const bestBeforeCands = candidates.filter((c) => c.dateType === 'best_before');
+  const mfgCands = candidates.filter(
+    (c) => c.dateType === 'manufacturing' || c.dateType === 'packaging'
+  );
+  const unknownCands = candidates.filter((c) => c.dateType === 'unknown');
+
+  let expiryDate: string | null = null;
+  let bestBeforeDate: string | null = null;
+  let manufacturingDate: string | null = null;
+  let primaryDate: string | null = null;
+  let detectedDateType: DateType = 'unknown';
+
+  if (expiryCands.length > 0) {
+    expiryDate = expiryCands[0].normalizedDate;
+  }
+
+  if (bestBeforeCands.length > 0) {
+    bestBeforeDate = bestBeforeCands[0].normalizedDate;
+  }
+
+  if (mfgCands.length > 0) {
+    manufacturingDate = mfgCands[0].normalizedDate;
+  }
+
+  // If no explicit expiry or best before was labeled, but unknown candidate exists:
+  if (!expiryDate && !bestBeforeDate && unknownCands.length > 0) {
+    if (unknownCands.length === 1 && !manufacturingDate) {
+      primaryDate = unknownCands[0].normalizedDate;
+      detectedDateType = 'expiry';
+      expiryDate = primaryDate;
+    } else if (unknownCands.length >= 2 && !manufacturingDate) {
+      const sorted = [...unknownCands].sort((a, b) =>
+        a.normalizedDate.localeCompare(b.normalizedDate)
+      );
+      manufacturingDate = sorted[0].normalizedDate;
+      expiryDate = sorted[sorted.length - 1].normalizedDate;
+      primaryDate = expiryDate;
+      detectedDateType = 'expiry';
+    } else if (unknownCands.length >= 1 && manufacturingDate) {
+      expiryDate = unknownCands[0].normalizedDate;
+      primaryDate = expiryDate;
+      detectedDateType = 'expiry';
+    }
+  }
+
+  // Determine primary date and type
+  if (expiryDate) {
+    primaryDate = expiryDate;
+    detectedDateType = expiryCands[0]?.dateType || 'expiry';
+  } else if (bestBeforeDate) {
+    primaryDate = bestBeforeDate;
+    detectedDateType = 'best_before';
+  }
+
+  // Determine detection status
+  if (primaryDate) {
+    return {
+      rawText,
+      ocrConfidence,
+      manufacturingDate,
+      expiryDate,
+      bestBeforeDate,
+      batchNumber,
+      detectedDateType,
+      primaryDate,
+      status: 'detected',
+      statusBadge: 'success',
+      statusText: 'Dates detected',
+      message: 'Verified dates successfully detected from printed label.',
+      candidates,
+    };
+  }
+
+  if (manufacturingDate) {
+    return {
+      rawText,
+      ocrConfidence,
+      manufacturingDate,
+      expiryDate: null,
+      bestBeforeDate: null,
+      batchNumber,
+      detectedDateType: 'manufacturing',
+      primaryDate: null,
+      status: 'mfg_only',
+      statusBadge: 'warning',
+      statusText: 'Only MFG date detected',
+      message:
+        'Manufacturing date detected, but no printed expiry or best-before date was recognized. Please check physical packaging.',
+      candidates,
+    };
+  }
+
+  return {
+    rawText,
+    ocrConfidence,
+    manufacturingDate: null,
+    expiryDate: null,
+    bestBeforeDate: null,
+    batchNumber,
+    detectedDateType: 'unknown',
+    primaryDate: null,
+    status: 'not_detected',
+    statusBadge: 'danger',
+    statusText: 'Could not confidently detect dates',
+    message:
+      'Could not confidently detect dates from label image. Please upload a clearer photograph of the printed package label.',
+    candidates,
+  };
+}

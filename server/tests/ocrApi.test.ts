@@ -131,8 +131,47 @@ async function runApiTests() {
       const hasMfg = json.data.candidates.some((c: any) => c.dateType === 'manufacturing');
       assert(hasExp, 'Live OCR accurately detected expiry date candidate');
       assert(hasMfg, 'Live OCR accurately detected manufacturing date candidate');
+      assert(json.data.status === 'detected', 'Structured status returns "detected"');
+      assert(json.data.expiryDate === '2026-11-28', 'Structured expiryDate is normalized to 2026-11-28');
+      assert(json.data.manufacturingDate === '2026-04-15', 'Structured manufacturingDate is normalized to 2026-04-15');
+      assert(json.data.batchNumber === 'LOT-84920', 'Structured batchNumber is extracted as LOT-84920');
+
+      // 7. Verify /api/ocr/scan-label alias
+      const formAlias = new FormData();
+      const blobAlias = new Blob([fileBytes], { type: 'image/jpeg' });
+      formAlias.append('image', blobAlias, 'sample-food-label-crisp.jpg');
+      const resAlias = await fetch(`${BASE_URL}/api/ocr/scan-label`, {
+        method: 'POST',
+        body: formAlias,
+      });
+      const jsonAlias = await resAlias.json();
+      assert(resAlias.status === 200, 'Alias /api/ocr/scan-label returns HTTP 200');
+      assert(jsonAlias.data.status === 'detected', 'Alias returns status "detected"');
+      assert(jsonAlias.data.expiryDate === '2026-11-28', 'Alias matches structured expiryDate');
     } else {
       console.warn('⚠️  Sample image not found, skipping live image step');
+    }
+  }
+
+  // 8. Unreadable non-label image produces 'not_detected' and zero fake dates
+  {
+    const volunteerHero = path.resolve(process.cwd(), 'public/volunteer-hero.jpg');
+    if (existsSync(volunteerHero)) {
+      const fs = await import('fs');
+      const fileBytes = fs.readFileSync(volunteerHero);
+      const form = new FormData();
+      const blob = new Blob([fileBytes], { type: 'image/jpeg' });
+      form.append('image', blob, 'volunteer-hero.jpg');
+
+      const res = await fetch(`${BASE_URL}/api/ocr/food-label`, {
+        method: 'POST',
+        body: form,
+      });
+      const json = await res.json();
+      assert(res.status === 200, 'Non-label image returns HTTP 200');
+      assert(json.data.status === 'not_detected', 'Non-label image correctly marked as not_detected');
+      assert(json.data.expiryDate === null, 'No expiry date fabricated for non-label image');
+      assert(json.data.manufacturingDate === null, 'No manufacturing date fabricated for non-label image');
     }
   }
 

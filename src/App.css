@@ -1605,6 +1605,7 @@
   max-width: 320px;
 }
 
+.sl-footer__event-tag,
 .sl-footer__exhibition-tag {
   font-size: 0.75rem;
   font-weight: 600;
@@ -5058,7 +5059,7 @@
   color: var(--sl-color-primary-700);
 }
 
-/* One-Click Exhibition Demo Sign In */
+/* One-Click Quick Demo Sign In */
 .sl-auth-quick-login {
   background-color: var(--sl-color-surface-subtle);
   border: 1px solid var(--sl-color-border-subtle);

@@ -12,6 +12,8 @@ import {
   isLeapYear,
   getDaysInMonth,
   getLocalCalendarDiff,
+  extractBatchNumber,
+  extractLabelInsights,
 } from '../services/dateParser';
 
 let passedTests = 0;
@@ -214,6 +216,65 @@ assert(diffEarly === 1, 'Calendar diff at 00:01:00 correctly calculates exactly 
 const midday = new Date(2026, 9, 23, 12, 0, 0);
 const diffMidday = getLocalCalendarDiff('2026-10-25', midday);
 assert(diffMidday === 2, 'Calendar diff at 12:00:00 calculates exactly 2 calendar days without UTC shift');
+
+// ----------------------------------------------------------------------------
+// 6. Structured Label Date Insights & Batch Number Tests
+// ----------------------------------------------------------------------------
+console.log('\n6. Structured Label Insights & Batch Extraction Tests:');
+assert(
+  extractBatchNumber('ORGANIC WHOLE OATS BATCH NO: LOT-84920 MFD 15/04/2026') === 'LOT-84920',
+  'Extracts BATCH NO: LOT-84920 accurately'
+);
+assert(
+  extractBatchNumber('INSTANT NOODLES BATCH #882 SEALED PACKET') === '882',
+  'Extracts BATCH #882 accurately'
+);
+assert(
+  extractBatchNumber('MILK PACKET LOT 44 EXP: 2026-10-25') === '44',
+  'Extracts LOT 44 accurately'
+);
+assert(
+  extractBatchNumber('FRESH BREAD NO CODE PRINTED') === null,
+  'Returns null when no batch or lot code is found'
+);
+
+// Structured insights test: Full label with MFD, EXP, and Best Before
+const sampleFullText = `
+  ORGANIC WHOLE OATS
+  BATCH NO: LOT-84920
+  MFD: 15/04/2026
+  EXPIRY DATE: 28/11/2026
+  BEST BEFORE: 24/11/2026
+`;
+const candsFull = extractDateCandidates(sampleFullText, 90);
+const insightsFull = extractLabelInsights(sampleFullText, candsFull, 90);
+
+assert(insightsFull.status === 'detected', 'Structured insights correctly sets status to detected');
+assert(insightsFull.statusText === 'Dates detected', 'Sets statusText to Dates detected');
+assert(insightsFull.manufacturingDate === '2026-04-15', 'Extracts manufacturingDate: 2026-04-15');
+assert(insightsFull.expiryDate === '2026-11-28', 'Extracts expiryDate: 2026-11-28');
+assert(insightsFull.bestBeforeDate === '2026-11-24', 'Extracts bestBeforeDate: 2026-11-24');
+assert(insightsFull.batchNumber === 'LOT-84920', 'Extracts batchNumber: LOT-84920');
+assert(insightsFull.primaryDate === '2026-11-28', 'Sets primaryDate to expiry date');
+
+// Structured insights test: Only MFD printed
+const sampleMfgOnlyText = 'PACKAGED SNACK MFD: 12/03/2026 BATCH #551';
+const candsMfg = extractDateCandidates(sampleMfgOnlyText, 85);
+const insightsMfg = extractLabelInsights(sampleMfgOnlyText, candsMfg, 85);
+
+assert(insightsMfg.status === 'mfg_only', 'Correctly detects mfg_only status when expiry is missing');
+assert(insightsMfg.manufacturingDate === '2026-03-12', 'Captures manufacturing date 2026-03-12');
+assert(insightsMfg.expiryDate === null, 'Ensures expiryDate is null when only MFD is present');
+assert(insightsMfg.primaryDate === null, 'Ensures primaryDate is null when only MFD is present');
+
+// Structured insights test: Unreadable / Garbage image text
+const sampleUnreadable = 'BLURRED IMAGE TEXT WITHOUT NUMBERS OR DATES';
+const candsNone = extractDateCandidates(sampleUnreadable, 40);
+const insightsNone = extractLabelInsights(sampleUnreadable, candsNone, 40);
+
+assert(insightsNone.status === 'not_detected', 'Correctly marks unreadable label as not_detected');
+assert(insightsNone.statusText === 'Could not confidently detect dates', 'Clear unverified message');
+assert(insightsNone.expiryDate === null && insightsNone.manufacturingDate === null, 'Zero fake dates fabricated for unreadable input');
 
 console.log('\n====================================================');
 console.log(`📊 Test Results: ${passedTests}/${totalTests} tests passed.`);

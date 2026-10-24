@@ -363,7 +363,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenDemo, onNavigateToInventory })
             {/* Preview Disclaimer Footer */}
             <div className="sl-preview-card__footer">
               <span className="sl-preview-card__notice">
-                *Interactive Exhibition Demonstration Component — Sample Data
+                *Interactive Preview Component — Real-Time Verification Flow
               </span>
             </div>
           </div>

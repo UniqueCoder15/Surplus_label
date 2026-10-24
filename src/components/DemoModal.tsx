@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
-  Sprout,
   Camera,
   CheckCircle2,
   AlertTriangle,
@@ -163,14 +162,18 @@ export const DemoModal: React.FC<DemoModalProps> = ({
         <div className="sl-modal__header">
           <div className="sl-modal__title-group">
             <div className="sl-brand__icon-box">
-              <Sprout size={20} className="sl-text-primary" aria-hidden="true" />
+              <img
+                src="/logo-icon.png"
+                alt="SurplusLabel"
+                style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+              />
             </div>
             <div>
               <h2 id="modal-title" className="sl-modal__title">
                 SurplusLabel Prototype Walkthrough
               </h2>
               <span className="sl-modal__subtitle">
-                Interactive Exhibition Mode • 3 Stakeholder Roles
+                Interactive Role Walkthrough • 3 Stakeholder Perspectives
               </span>
             </div>
           </div>

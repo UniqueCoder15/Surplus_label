@@ -49,6 +49,9 @@ export interface FoodListing {
   imagePublicId?: string;
   relevantDate: string; // YYYY-MM-DD
   dateType: DateType;
+  manufacturingDate?: string;
+  expiryDate?: string;
+  batchNumber?: string;
   isManuallyConfirmed: boolean;
   verifiedBy?: string;
   verifiedAt?: string;
@@ -92,6 +95,9 @@ export interface CreateListingFormData {
   imagePublicId?: string;
   relevantDate: string;
   dateType: DateType;
+  manufacturingDate?: string;
+  expiryDate?: string;
+  batchNumber?: string;
   isManuallyConfirmed: boolean;
   verifiedBy: string;
   rawOcrText?: string;

@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   ArrowLeft,
   Upload,
-  Calendar,
   Sparkles,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
+  Clock,
+  ShieldCheck,
+  FileText,
+  Tag,
+  Camera,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { DateType } from '../utils/ocrDateParser';
@@ -16,103 +21,185 @@ interface AddFoodScreenProps {
 
 export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
   const { user, authFetch } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Form Fields
+  // Form Fields (Food Details)
   const [foodName, setFoodName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('packets');
   const [category, setCategory] = useState('canned_packaged');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [dateType, setDateType] = useState<DateType>('expiry');
   const [storageCondition, setStorageCondition] = useState('ambient');
   const [pickupLocation, setPickupLocation] = useState('Distribution Bay 3, Central Hub');
   const [notes, setNotes] = useState('');
 
-  // OCR & Image Upload States
+  // Automatically Extracted Dates (NO manual input fields)
+  const [extractedExpiryDate, setExtractedExpiryDate] = useState<string | null>(null);
+  const [extractedMfgDate, setExtractedMfgDate] = useState<string | null>(null);
+  const [extractedBestBeforeDate, setExtractedBestBeforeDate] = useState<string | null>(null);
+  const [extractedBatchNumber, setExtractedBatchNumber] = useState<string | null>(null);
+  const [extractedDateType, setExtractedDateType] = useState<DateType>('expiry');
+
+  // OCR Status States
+  const [ocrStatus, setOcrStatus] = useState<
+    'idle' | 'scanning' | 'detected' | 'mfg_only' | 'not_detected'
+  >('idle');
+  const [ocrStatusText, setOcrStatusText] = useState<string>('No label uploaded yet');
+  const [ocrConfidence, setOcrConfidence] = useState<number | null>(null);
+  const [rawOcrSnippet, setRawOcrSnippet] = useState<string>('');
+
+  // Image & Verification States
   const [, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
-  const [ocrResult, setOcrResult] = useState<{
-    rawText: string;
-    detectedDate?: string;
-    dateType?: DateType;
-    confidence?: number;
-  } | null>(null);
   const [isVerified, setIsVerified] = useState(false);
 
-  // Submission States
+  // Form Submission States
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setImageFile(file);
-    const objectUrl = URL.createObjectURL(file);
-    setImagePreview(objectUrl);
+  /**
+   * Resets all previous OCR extraction states to prevent stale date persistence.
+   */
+  const clearPreviousExtraction = () => {
+    setExtractedExpiryDate(null);
+    setExtractedMfgDate(null);
+    setExtractedBestBeforeDate(null);
+    setExtractedBatchNumber(null);
+    setExtractedDateType('expiry');
+    setRawOcrSnippet('');
+    setOcrConfidence(null);
+    setIsVerified(false);
     setError(null);
-
-    // Auto-run OCR scanning through backend pipeline
-    runOcrPipeline(file);
   };
 
+  /**
+   * Executes the real Tesseract OCR pipeline on the backend.
+   * Completely avoids any mocked or hardcoded dates.
+   */
   const runOcrPipeline = async (file: File) => {
+    clearPreviousExtraction();
+    setImageFile(file);
+
+    const objectUrl = URL.createObjectURL(file);
+    setImagePreview(objectUrl);
+
     setIsUploading(true);
-    setUploadProgress('Scanning food label with OCR...');
-    setOcrResult(null);
+    setOcrStatus('scanning');
+    setOcrStatusText('Analyzing label with OCR...');
+    setUploadProgress('Running Tesseract.js packaging date recognition...');
 
     try {
       const formData = new FormData();
       formData.append('image', file);
 
-      const res = await authFetch('/api/ocr/scan-label', {
+      // Call backend OCR route (both /food-label and /scan-label are supported)
+      const res = await authFetch('/api/ocr/food-label', {
         method: 'POST',
         body: formData,
       });
 
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          const extracted = json.data;
-          setOcrResult({
-            rawText: extracted.rawText || '',
-            detectedDate: extracted.bestDateCandidate?.isoDate,
-            dateType: extracted.bestDateCandidate?.dateType || 'expiry',
-            confidence: extracted.confidenceScore || 92,
-          });
+      const json = await res.json();
 
-          // Autofill date if candidate exists
-          if (extracted.bestDateCandidate?.isoDate) {
-            setExpiryDate(extracted.bestDateCandidate.isoDate);
-            setDateType(extracted.bestDateCandidate.dateType || 'expiry');
-          }
+      if (res.ok && json.success && json.data) {
+        const data = json.data;
+        const rawText = data.rawText || '';
+        setRawOcrSnippet(rawText);
+        setOcrConfidence(
+          typeof data.confidence === 'number'
+            ? data.confidence
+            : data.confidenceScore || 0
+        );
+
+        if (data.status === 'detected') {
+          setOcrStatus('detected');
+          setOcrStatusText(data.statusText || 'Dates detected');
+          setExtractedExpiryDate(
+            data.expiryDate || data.bestBeforeDate || data.primaryDate || null
+          );
+          setExtractedMfgDate(data.manufacturingDate || null);
+          setExtractedBestBeforeDate(data.bestBeforeDate || null);
+          setExtractedBatchNumber(data.batchNumber || null);
+          setExtractedDateType(data.detectedDateType || 'expiry');
+        } else if (data.status === 'mfg_only') {
+          setOcrStatus('mfg_only');
+          setOcrStatusText(data.statusText || 'Only MFG date detected');
+          setExtractedMfgDate(data.manufacturingDate || null);
+          setExtractedExpiryDate(null);
+          setExtractedBestBeforeDate(null);
+          setExtractedBatchNumber(data.batchNumber || null);
+          setExtractedDateType('manufacturing');
+          setError(
+            data.message ||
+              'Only manufacturing date detected. An identifiable expiry or best-before date is required to create a verified listing.'
+          );
+        } else {
+          setOcrStatus('not_detected');
+          setOcrStatusText('Could not confidently detect dates');
+          setExtractedExpiryDate(null);
+          setExtractedMfgDate(null);
+          setExtractedBestBeforeDate(null);
+          setExtractedBatchNumber(null);
+          setError(
+            data.message ||
+              'Could not confidently detect dates from uploaded label. Please upload a clearer photograph of the printed package label.'
+          );
         }
       } else {
-        // Fallback simulated OCR if network / credentials issue
-        setOcrResult({
-          rawText: 'EXP: 2026-10-25 BATCH #882 SEALED PACKET',
-          detectedDate: '2026-10-25',
-          dateType: 'expiry',
-          confidence: 94,
-        });
-        setExpiryDate('2026-10-25');
+        setOcrStatus('not_detected');
+        setOcrStatusText('Could not confidently detect dates');
+        setExtractedExpiryDate(null);
+        setExtractedMfgDate(null);
+        setExtractedBestBeforeDate(null);
+        setExtractedBatchNumber(null);
+        setError(
+          json.error ||
+            'Could not process packaging label. Please upload a clear, unblurred photo.'
+        );
       }
-    } catch (err) {
-      console.error('OCR scanning error:', err);
-      // Soft fallback for offline/demo inspection
-      setOcrResult({
-        rawText: 'BEST BEFORE: 2026-10-28 LOT #901',
-        detectedDate: '2026-10-28',
-        dateType: 'best_before',
-        confidence: 90,
-      });
-      setExpiryDate('2026-10-28');
+    } catch (err: any) {
+      console.error('OCR pipeline failure:', err);
+      setOcrStatus('not_detected');
+      setOcrStatusText('Could not confidently detect dates');
+      setExtractedExpiryDate(null);
+      setExtractedMfgDate(null);
+      setExtractedBestBeforeDate(null);
+      setExtractedBatchNumber(null);
+      setError(
+        err?.message ||
+          'Network or processing error during OCR. Please try again with a clear photo.'
+      );
     } finally {
       setIsUploading(false);
       setUploadProgress(null);
+    }
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    runOcrPipeline(file);
+  };
+
+  /**
+   * Helper to test the real OCR pipeline with bundled sample labels.
+   */
+  const handleLoadSampleLabel = async (samplePath: string, sampleLabel: string) => {
+    try {
+      setIsUploading(true);
+      setUploadProgress(`Loading sample: ${sampleLabel}...`);
+      const response = await fetch(samplePath);
+      const blob = await response.blob();
+      const filename = samplePath.split('/').pop() || 'sample.jpg';
+      const file = new File([blob], filename, {
+        type: blob.type || 'image/jpeg',
+      });
+      runOcrPipeline(file);
+    } catch (err) {
+      console.error('Failed to load sample label:', err);
+      setError('Failed to load sample label. Please upload your own photo.');
+      setIsUploading(false);
     }
   };
 
@@ -126,11 +213,22 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
     }
     const qtyNum = parseInt(quantity, 10);
     if (isNaN(qtyNum) || qtyNum <= 0) {
-      setError('Please provide a valid quantity.');
+      setError('Please provide a valid quantity greater than 0.');
       return;
     }
-    if (!expiryDate) {
-      setError('Please provide the expiry or best-before date.');
+
+    const finalRelevantDate = extractedExpiryDate || extractedBestBeforeDate;
+    if (!finalRelevantDate) {
+      setError(
+        'A printed label with a confidently detected expiry or best-before date is required. Please upload a clear label image.'
+      );
+      return;
+    }
+
+    if (!isVerified) {
+      setError(
+        'Mandatory food safety sign-off: Please check the verification box to confirm the extracted dates match the physical package label.'
+      );
       return;
     }
 
@@ -144,16 +242,19 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
         unit,
         storageCondition,
         handlingNotes: notes.trim(),
-        donorOrg: user?.organizationName || 'ABC Hostel Mess',
+        donorOrg: user?.organizationName || 'Central Pantry Donor Hub',
         pickupLocation: pickupLocation.trim() || 'Sector 62, Noida',
         contactPhone: user?.phone || '+1 (555) 234-5678',
         imageUrl: imagePreview || '/noodles.jpg',
-        relevantDate: expiryDate,
-        dateType,
-        isManuallyConfirmed: isVerified,
-        verifiedBy: user?.contactName || 'Elena Rostova',
-        rawOcrText: ocrResult?.rawText,
-        ocrConfidence: ocrResult?.confidence,
+        relevantDate: finalRelevantDate,
+        dateType: extractedDateType,
+        manufacturingDate: extractedMfgDate || undefined,
+        expiryDate: extractedExpiryDate || undefined,
+        batchNumber: extractedBatchNumber || undefined,
+        isManuallyConfirmed: true,
+        verifiedBy: user?.contactName || 'Authorized Staff',
+        rawOcrText: rawOcrSnippet || undefined,
+        ocrConfidence: ocrConfidence || undefined,
       };
 
       const res = await authFetch('/api/listings', {
@@ -167,15 +268,55 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
         setSuccess(true);
         setTimeout(() => {
           onNavigate('donor');
-        }, 800);
+        }, 1000);
       } else {
         setError(json.error || 'Failed to submit food listing.');
       }
     } catch (err: any) {
       console.error('Submission error:', err);
-      setError(err.message || 'Network error creating listing.');
+      setError(err?.message || 'Network error creating listing.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const getStatusBadge = () => {
+    switch (ocrStatus) {
+      case 'scanning':
+        return (
+          <span className="sl-auto-badge sl-auto-badge--scanning">
+            <Clock size={12} className="animate-spin" />
+            <span>{ocrStatusText}</span>
+          </span>
+        );
+      case 'detected':
+        return (
+          <span className="sl-auto-badge sl-auto-badge--success">
+            <CheckCircle2 size={12} />
+            <span>{ocrStatusText} {ocrConfidence ? `(${ocrConfidence}%)` : ''}</span>
+          </span>
+        );
+      case 'mfg_only':
+        return (
+          <span className="sl-auto-badge sl-auto-badge--warning">
+            <AlertTriangle size={12} />
+            <span>{ocrStatusText}</span>
+          </span>
+        );
+      case 'not_detected':
+        return (
+          <span className="sl-auto-badge sl-auto-badge--danger">
+            <AlertCircle size={12} />
+            <span>{ocrStatusText}</span>
+          </span>
+        );
+      default:
+        return (
+          <span className="sl-auto-badge sl-auto-badge--idle">
+            <Camera size={12} />
+            <span>{ocrStatusText}</span>
+          </span>
+        );
     }
   };
 
@@ -193,11 +334,11 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
             <span>Add Food Listing</span>
           </button>
           <p className="sl-add-food-sub-ref">
-            Enter the details of surplus packaged food.
+            Upload package label photo for automatic date extraction. Manual date entry is eliminated for food safety.
           </p>
         </div>
 
-        {/* Error / Success Notifications */}
+        {/* Notifications */}
         {error && (
           <div className="sl-auth-error-banner-ref" role="alert">
             <AlertCircle size={18} />
@@ -214,7 +355,7 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
 
         {/* Two-Column Form */}
         <form onSubmit={handleSubmit} className="sl-add-food-grid-ref">
-          {/* Left Column: Food Details Form */}
+          {/* Left Column: Food Details & Automatic Extracted Dates Card */}
           <div className="sl-add-food-left-card-ref">
             <div className="sl-form-field-ref">
               <label className="sl-form-label-ref" htmlFor="food-name">
@@ -224,7 +365,7 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
                 id="food-name"
                 type="text"
                 className="sl-text-input-ref"
-                placeholder="e.g., Biscuits, Noodles, Milk etc."
+                placeholder="e.g., Biscuits, Noodles, Milk, Oats etc."
                 value={foodName}
                 onChange={(e) => setFoodName(e.target.value)}
                 required
@@ -269,40 +410,104 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
               </div>
             </div>
 
-            <div className="sl-form-row-2-ref">
-              <div className="sl-form-field-ref">
-                <label className="sl-form-label-ref" htmlFor="food-date">
-                  Expiry / Best Before Date <span className="sl-required-ref">*</span>
-                </label>
-                <div className="sl-input-with-icon-ref">
-                  <input
-                    id="food-date"
-                    type="date"
-                    className="sl-text-input-ref"
-                    value={expiryDate}
-                    onChange={(e) => setExpiryDate(e.target.value)}
-                    required
-                  />
-                  <Calendar size={18} className="sl-input-icon-right-ref" />
+            {/* AUTOMATIC PACKAGING DATES CARD (No manual date entry fields) */}
+            <div className="sl-auto-dates-panel">
+              <div className="sl-auto-dates-header">
+                <div className="sl-auto-dates-title">
+                  <Sparkles size={16} className="sl-text-primary" />
+                  <span>Automatic Label Dates (OCR)</span>
+                </div>
+                {getStatusBadge()}
+              </div>
+
+              <div className="sl-auto-dates-grid">
+                {/* Expiry / Use By Date */}
+                <div
+                  className={`sl-auto-date-item ${
+                    extractedExpiryDate ? 'sl-auto-date-item--highlight' : ''
+                  }`}
+                >
+                  <div className="sl-auto-date-label">
+                    Expiry / Best Before Date
+                  </div>
+                  <div
+                    className={
+                      extractedExpiryDate
+                        ? 'sl-auto-date-value'
+                        : 'sl-auto-date-value--empty'
+                    }
+                  >
+                    {extractedExpiryDate ||
+                      (ocrStatus === 'scanning'
+                        ? 'Extracting...'
+                        : 'Pending label upload')}
+                  </div>
+                </div>
+
+                {/* Manufacturing Date */}
+                <div className="sl-auto-date-item">
+                  <div className="sl-auto-date-label">Manufacturing Date (MFD)</div>
+                  <div
+                    className={
+                      extractedMfgDate
+                        ? 'sl-auto-date-value'
+                        : 'sl-auto-date-value--empty'
+                    }
+                  >
+                    {extractedMfgDate ||
+                      (ocrStatus === 'scanning'
+                        ? 'Extracting...'
+                        : 'Not detected on label')}
+                  </div>
+                </div>
+
+                {/* Batch / Lot Number */}
+                <div className="sl-auto-date-item">
+                  <div className="sl-auto-date-label">Batch / Lot Number</div>
+                  <div
+                    className={
+                      extractedBatchNumber
+                        ? 'sl-auto-date-value'
+                        : 'sl-auto-date-value--empty'
+                    }
+                  >
+                    {extractedBatchNumber ||
+                      (ocrStatus === 'scanning'
+                        ? 'Extracting...'
+                        : 'Not detected on label')}
+                  </div>
+                </div>
+
+                {/* Date Classification */}
+                <div className="sl-auto-date-item">
+                  <div className="sl-auto-date-label">Classification</div>
+                  <div className="sl-auto-date-value" style={{ textTransform: 'capitalize' }}>
+                    {extractedDateType === 'best_before'
+                      ? 'Best Before'
+                      : extractedDateType === 'use_by'
+                      ? 'Use By'
+                      : extractedDateType === 'manufacturing'
+                      ? 'Manufacturing'
+                      : 'Expiry Date'}
+                  </div>
                 </div>
               </div>
 
-              <div className="sl-form-field-ref">
-                <label className="sl-form-label-ref" htmlFor="food-date-type">
-                  Date Type
-                </label>
-                <select
-                  id="food-date-type"
-                  className="sl-select-input-ref"
-                  value={dateType}
-                  onChange={(e) => setDateType(e.target.value as DateType)}
-                >
-                  <option value="expiry">Expiry Date</option>
-                  <option value="best_before">Best Before</option>
-                  <option value="use_by">Use By</option>
-                  <option value="manufacturing">Manufacturing Date</option>
-                </select>
-              </div>
+              <p
+                style={{
+                  fontSize: '0.75rem',
+                  color: '#64748B',
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <ShieldCheck size={14} className="sl-text-primary" />
+                <span>
+                  Dates are automatically extracted from your package label photo. Manual date entry is disabled for tamper prevention.
+                </span>
+              </p>
             </div>
 
             <div className="sl-form-field-ref">
@@ -315,10 +520,10 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
               >
-                <option value="canned_packaged">Packaged Snacks & Noodles</option>
-                <option value="bakery">Bakery & Biscuits</option>
-                <option value="dairy">Dairy & Milk</option>
-                <option value="pantry_grains">Grains & Cereals</option>
+                <option value="canned_packaged">Packaged Snacks &amp; Noodles</option>
+                <option value="bakery">Bakery &amp; Biscuits</option>
+                <option value="dairy">Dairy &amp; Milk</option>
+                <option value="pantry_grains">Grains &amp; Cereals</option>
                 <option value="beverages">Beverages</option>
                 <option value="produce">Fresh Produce</option>
                 <option value="prepared_meals">Prepared Meals</option>
@@ -337,7 +542,7 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
                   onChange={(e) => setStorageCondition(e.target.value)}
                 >
                   <option value="ambient">Ambient (Room Temperature)</option>
-                  <option value="cool_dry">Cool & Dry Place</option>
+                  <option value="cool_dry">Cool &amp; Dry Place</option>
                   <option value="chilled">Refrigerated (2°C - 4°C)</option>
                   <option value="frozen">Frozen (-18°C)</option>
                 </select>
@@ -366,7 +571,7 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
                 id="food-notes"
                 rows={3}
                 className="sl-textarea-input-ref"
-                placeholder="e.g. storage conditions, special instructions."
+                placeholder="e.g. storage instructions, package integrity notes."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
@@ -375,87 +580,172 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
 
           {/* Right Column: Food Label Uploader & Verification */}
           <div className="sl-add-food-right-card-ref">
-            <label className="sl-form-label-ref">
-              Upload Food Label Image <span className="sl-required-ref">*</span>
-            </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label className="sl-form-label-ref" style={{ margin: 0 }}>
+                Upload Printed Food Label <span className="sl-required-ref">*</span>
+              </label>
+              {ocrStatus === 'detected' && (
+                <span style={{ fontSize: '0.75rem', color: '#16A34A', fontWeight: 700 }}>
+                  ✓ OCR Verified
+                </span>
+              )}
+            </div>
 
             {/* Drag & Drop Upload Zone */}
-            <div className="sl-dropzone-ref">
+            <div
+              className="sl-dropzone-ref"
+              onClick={() => fileInputRef.current?.click()}
+            >
               <input
+                ref={fileInputRef}
                 type="file"
                 id="label-image-input"
                 accept="image/*"
                 className="sl-file-hidden-input-ref"
                 onChange={handleImageSelect}
               />
-              <label htmlFor="label-image-input" className="sl-dropzone-label-ref">
+              <div className="sl-dropzone-label-ref">
                 <div className="sl-dropzone-icon-box-ref">
                   <Upload size={24} />
                 </div>
                 <div className="sl-dropzone-text-ref">
-                  <strong>Drag & drop an image here</strong> or click to upload
+                  <strong>Drag &amp; drop an image here</strong> or click to browse
                 </div>
                 <div className="sl-dropzone-subtext-ref">
-                  Upload clear photo of the food label (JPG, PNG)
+                  Clear photograph of printed label showing MFG / EXP / BEST BEFORE (JPG, PNG)
                 </div>
-              </label>
+              </div>
             </div>
 
-            {/* Loading / Progress State */}
+            {/* Quick Presets for Real OCR Testing */}
+            <div>
+              <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
+                Quick Test Samples:
+              </span>
+              <div className="sl-sample-presets-row">
+                <button
+                  type="button"
+                  className="sl-sample-preset-btn"
+                  onClick={() =>
+                    handleLoadSampleLabel(
+                      '/sample-food-label-crisp.jpg',
+                      'Crisp Oats (MFD + EXP + BB)'
+                    )
+                  }
+                  title="Test OCR on real label with MFD: 15/04/2026, EXP: 28/11/2026, BEST BEFORE: 24/11/2026"
+                >
+                  <Sparkles size={13} className="sl-text-primary" />
+                  <span>Crisp Oats (MFD + EXP + BB)</span>
+                </button>
+                <button
+                  type="button"
+                  className="sl-sample-preset-btn"
+                  onClick={() =>
+                    handleLoadSampleLabel(
+                      '/noodles.jpg',
+                      'Instant Noodles Pack'
+                    )
+                  }
+                  title="Test OCR on noodles package"
+                >
+                  <Tag size={13} className="sl-text-primary" />
+                  <span>Noodles Pack</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Processing Indicator */}
             {isUploading && (
               <div className="sl-ocr-progress-ref">
                 <div className="sl-spinner-ref" />
-                <span>{uploadProgress || 'Processing image...'}</span>
+                <span>{uploadProgress || 'Processing image with OCR...'}</span>
               </div>
             )}
 
-            {/* Image Preview & OCR Candidates */}
+            {/* Uploaded Image Preview & Extraction Card */}
             <div className="sl-upload-preview-container-ref">
               <div className="sl-upload-preview-box-ref">
-                <img
-                  src={imagePreview || '/noodles.jpg'}
-                  alt="Food label preview"
-                  className="sl-upload-preview-img-ref"
-                />
+                {imagePreview ? (
+                  <img
+                    src={imagePreview}
+                    alt="Food label preview"
+                    className="sl-upload-preview-img-ref"
+                  />
+                ) : (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: '#94A3B8',
+                    }}
+                  >
+                    <Camera size={36} />
+                    <span style={{ fontSize: '0.8125rem' }}>No image uploaded yet</span>
+                  </div>
+                )}
               </div>
 
-              {ocrResult && (
-                <div className="sl-ocr-result-card-ref">
-                  <div className="sl-ocr-result-header-ref">
-                    <Sparkles size={16} className="sl-ocr-sparkle-icon-ref" />
-                    <span className="sl-ocr-result-title-ref">OCR Date Detected</span>
-                    {ocrResult.confidence && (
-                      <span className="sl-ocr-confidence-pill-ref">
-                        {ocrResult.confidence}% confidence
-                      </span>
-                    )}
+              {/* Recognized Raw Text Snippet */}
+              {rawOcrSnippet && (
+                <div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '0.6875rem',
+                      fontWeight: 700,
+                      color: '#475569',
+                      textTransform: 'uppercase',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    <FileText size={12} />
+                    <span>Recognized Label Text Snippet:</span>
                   </div>
-
-                  <p className="sl-ocr-detected-text-ref">
-                    Detected Date: <strong>{ocrResult.detectedDate || 'Manual entry required'}</strong>
-                  </p>
-
-                  <label className="sl-verify-checkbox-label-ref">
-                    <input
-                      type="checkbox"
-                      checked={isVerified}
-                      onChange={(e) => setIsVerified(e.target.checked)}
-                      className="sl-checkbox-ref"
-                    />
-                    <span>I have visually verified the date and label details.</span>
-                  </label>
+                  <div className="sl-ocr-snippet-box">{rawOcrSnippet.trim()}</div>
                 </div>
               )}
+
+              {/* Visual Verification Checkbox */}
+              <div className="sl-ocr-result-card-ref">
+                <label className="sl-verify-checkbox-label-ref">
+                  <input
+                    type="checkbox"
+                    checked={isVerified}
+                    onChange={(e) => setIsVerified(e.target.checked)}
+                    className="sl-checkbox-ref"
+                    disabled={!extractedExpiryDate || ocrStatus !== 'detected'}
+                  />
+                  <span style={{ fontSize: '0.8125rem', color: '#1E293B' }}>
+                    <strong>Mandatory Verification:</strong> I confirm the automatically extracted dates match the physical package label.
+                  </span>
+                </label>
+              </div>
             </div>
 
-            {/* Submit Action Button */}
+            {/* Action Buttons */}
             <div className="sl-add-food-actions-ref">
               <button
                 type="submit"
                 className="sl-btn-ref sl-btn-ref--primary sl-btn-ref--lg"
-                disabled={isSubmitting}
+                disabled={
+                  isSubmitting ||
+                  isUploading ||
+                  !extractedExpiryDate ||
+                  !isVerified
+                }
+                title={
+                  !extractedExpiryDate
+                    ? 'Upload a label image with a detected expiry date to enable submission'
+                    : !isVerified
+                    ? 'Check the visual verification confirmation to submit'
+                    : 'Submit verified food listing'
+                }
               >
-                {isSubmitting ? 'Submitting Listing...' : 'Submit Listing'}
+                {isSubmitting ? 'Submitting Listing...' : 'Submit Verified Listing'}
               </button>
             </div>
           </div>
