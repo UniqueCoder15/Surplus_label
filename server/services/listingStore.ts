@@ -189,13 +189,57 @@ function assertDatabaseConnected(): void {
   }
 }
 
+export function getDefaultImageForCategory(category?: string): string {
+  switch (category) {
+    case 'dairy':
+      return '/milk.jpg';
+    case 'bakery':
+      return '/biscuits.jpg';
+    case 'canned_packaged':
+      return '/noodles.jpg';
+    case 'pantry_grains':
+      return '/sample-food-label-crisp.jpg';
+    case 'produce':
+      return '/food-box-hero.jpg';
+    case 'prepared_meals':
+    case 'beverages':
+    default:
+      return '/noodles.jpg';
+  }
+}
+
+export function sanitizeListingImageUrl(rawUrl?: unknown, category?: string): string {
+  if (rawUrl && typeof rawUrl === 'string') {
+    const trimmed = rawUrl.trim();
+    if (
+      trimmed.length > 0 &&
+      !trimmed.startsWith('blob:') &&
+      !trimmed.startsWith('data:') &&
+      trimmed !== 'undefined' &&
+      trimmed !== 'null'
+    ) {
+      return trimmed;
+    }
+  }
+  return getDefaultImageForCategory(category);
+}
+
 function listingFromDocument(doc: IListingDocument | Record<string, unknown>): FoodListing {
   const plain =
     typeof (doc as IListingDocument).toObject === 'function'
       ? (doc as IListingDocument).toObject()
       : { ...doc };
   const { _id, __v, ...rest } = plain as Record<string, unknown>;
-  return enrichListingWithUrgency(rest as unknown as FoodListing);
+  const rawItem = rest as unknown as FoodListing;
+
+  // Resolve image URL: support imageUrl, image, or images[] and sanitize stale blob: URLs
+  const candidateImg =
+    rawItem.imageUrl ||
+    (rawItem as any).image ||
+    (Array.isArray((rawItem as any).images) ? (rawItem as any).images[0] : undefined);
+  rawItem.imageUrl = sanitizeListingImageUrl(candidateImg, rawItem.category);
+
+  return enrichListingWithUrgency(rawItem);
 }
 
 function applyFilters(items: FoodListing[], filters: ListingFilters): FoodListing[] {
@@ -374,8 +418,8 @@ class ListingStore {
       donorOrg: (currentUser?.organizationName || input.donorOrg).trim(),
       pickupLocation: input.pickupLocation.trim(),
       contactPhone: input.contactPhone?.trim() || currentUser?.phone,
-      imageUrl: input.imageUrl,
-      imagePublicId: input.imagePublicId,
+      imageUrl: sanitizeListingImageUrl(input.imageUrl, input.category),
+      imagePublicId: input.imagePublicId?.trim() || undefined,
       relevantDate: input.relevantDate,
       dateType: input.dateType,
       manufacturingDate: input.manufacturingDate ? input.manufacturingDate.trim() : undefined,

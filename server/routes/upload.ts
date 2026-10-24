@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { Readable } from 'stream';
 import { uploadMiddleware, validateImageSignature } from '../middleware/upload';
-import { cloudinary, isCloudinaryConfigured } from '../cloudinary';
+import { cloudinary, isCloudinaryConfigured, configureCloudinary, cleanEnv } from '../cloudinary';
 import { isMongoConnected } from '../db/connection';
 
 const router = Router();
@@ -83,7 +83,9 @@ router.post(
         return;
       }
 
-      // Check if Cloudinary credentials are configured
+      // Ensure Cloudinary is dynamically configured with clean env vars
+      configureCloudinary();
+
       if (!isCloudinaryConfigured()) {
         res.status(503).json({
           success: false,
@@ -101,7 +103,7 @@ router.post(
       }
 
       // Stream buffer directly to Cloudinary
-      const folder = process.env.CLOUDINARY_FOLDER || 'surpluslabel/food-labels';
+      const folder = cleanEnv(process.env.CLOUDINARY_FOLDER) || 'surpluslabel/food-labels';
       
       const uploadPromise = new Promise<{
         secure_url: string;
@@ -116,7 +118,6 @@ router.post(
           {
             folder,
             resource_type: 'image',
-            allowed_formats: ['jpg', 'png', 'webp', 'jpeg'],
             transformation: [{ quality: 'auto', fetch_format: 'auto' }],
           },
           (error: any, result: any) => {
@@ -146,14 +147,12 @@ router.post(
         },
       });
     } catch (error: any) {
-      console.error('[Upload Endpoint Error]:', error?.message || error);
+      const errMsg = error?.message || (typeof error === 'string' ? error : 'Upstream upload failure');
+      console.error('[Upload Endpoint Error]:', errMsg);
       res.status(502).json({
         success: false,
         error: 'Failed to upload image to Cloudinary storage service.',
-        details:
-          process.env.NODE_ENV === 'development'
-            ? error?.message
-            : 'Upstream upload failure',
+        details: errMsg,
       });
     }
   }

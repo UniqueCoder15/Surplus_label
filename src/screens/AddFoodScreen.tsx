@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { DateType } from '../utils/ocrDateParser';
+import { resolveListingImageUrl } from '../utils/imageUtils';
 
 interface AddFoodScreenProps {
   onNavigate: (screen: string) => void;
@@ -50,6 +51,9 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
   // Image & Verification States
   const [, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [uploadedImagePublicId, setUploadedImagePublicId] = useState<string | null>(null);
+  const [isCloudinarySynced, setIsCloudinarySynced] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [isVerified, setIsVerified] = useState(false);
@@ -70,6 +74,9 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
     setExtractedDateType('expiry');
     setRawOcrSnippet('');
     setOcrConfidence(null);
+    setUploadedImageUrl(null);
+    setUploadedImagePublicId(null);
+    setIsCloudinarySynced(false);
     setIsVerified(false);
     setError(null);
   };
@@ -78,17 +85,45 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
    * Executes the real Tesseract OCR pipeline on the backend.
    * Completely avoids any mocked or hardcoded dates.
    */
-  const runOcrPipeline = async (file: File) => {
+  const runOcrPipeline = async (file: File, explicitPermanentUrl?: string) => {
     clearPreviousExtraction();
     setImageFile(file);
 
     const objectUrl = URL.createObjectURL(file);
     setImagePreview(objectUrl);
 
+    if (explicitPermanentUrl) {
+      setUploadedImageUrl(explicitPermanentUrl);
+      setIsCloudinarySynced(false);
+    }
+
     setIsUploading(true);
     setOcrStatus('scanning');
-    setOcrStatusText('Analyzing label with OCR...');
-    setUploadProgress('Running Tesseract.js packaging date recognition...');
+    setOcrStatusText('Analyzing label & syncing image...');
+    setUploadProgress('Running OCR recognition & Cloudinary image sync...');
+
+    // If no explicit static asset URL provided, stream uploaded photo to Cloudinary CDN in parallel
+    if (!explicitPermanentUrl) {
+      const uploadData = new FormData();
+      uploadData.append('image', file);
+      authFetch('/api/uploads/food-label', {
+        method: 'POST',
+        body: uploadData,
+      })
+        .then(async (res) => {
+          if (res.ok) {
+            const uploadJson = await res.json();
+            if (uploadJson.success && uploadJson.data?.url) {
+              setUploadedImageUrl(uploadJson.data.url);
+              setUploadedImagePublicId(uploadJson.data.public_id || null);
+              setIsCloudinarySynced(true);
+            }
+          }
+        })
+        .catch((uploadErr) => {
+          console.warn('Cloudinary upload warning:', uploadErr);
+        });
+    }
 
     try {
       const formData = new FormData();
@@ -195,7 +230,7 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
       const file = new File([blob], filename, {
         type: blob.type || 'image/jpeg',
       });
-      runOcrPipeline(file);
+      runOcrPipeline(file, samplePath);
     } catch (err) {
       console.error('Failed to load sample label:', err);
       setError('Failed to load sample label. Please upload your own photo.');
@@ -235,6 +270,12 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
     setIsSubmitting(true);
 
     try {
+      // Determine permanent, non-ephemeral image URL (Cloudinary > static sample > category fallback)
+      const finalImageUrl =
+        uploadedImageUrl && !uploadedImageUrl.startsWith('blob:')
+          ? uploadedImageUrl
+          : resolveListingImageUrl(null, category);
+
       const payload = {
         title: foodName.trim(),
         category,
@@ -245,7 +286,8 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
         donorOrg: user?.organizationName || 'Central Pantry Donor Hub',
         pickupLocation: pickupLocation.trim() || 'Sector 62, Noida',
         contactPhone: user?.phone || '+1 (555) 234-5678',
-        imageUrl: imagePreview || '/noodles.jpg',
+        imageUrl: finalImageUrl,
+        imagePublicId: uploadedImagePublicId || undefined,
         relevantDate: finalRelevantDate,
         dateType: extractedDateType,
         manufacturingDate: extractedMfgDate || undefined,
@@ -584,11 +626,18 @@ export const AddFoodScreen: React.FC<AddFoodScreenProps> = ({ onNavigate }) => {
               <label className="sl-form-label-ref" style={{ margin: 0 }}>
                 Upload Printed Food Label <span className="sl-required-ref">*</span>
               </label>
-              {ocrStatus === 'detected' && (
-                <span style={{ fontSize: '0.75rem', color: '#16A34A', fontWeight: 700 }}>
-                  ✓ OCR Verified
-                </span>
-              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {isCloudinarySynced && (
+                  <span style={{ fontSize: '0.75rem', color: '#0284C7', fontWeight: 700 }}>
+                    ☁️ Cloudinary Synced
+                  </span>
+                )}
+                {ocrStatus === 'detected' && (
+                  <span style={{ fontSize: '0.75rem', color: '#16A34A', fontWeight: 700 }}>
+                    ✓ OCR Verified
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Drag & Drop Upload Zone */}

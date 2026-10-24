@@ -3,6 +3,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { FoodListing } from '../types/inventory';
+import { ListingImage } from '../components/ListingImage';
 
 interface CoordinatorDashboardScreenProps {
   onNavigate: (screen: string, listingId?: string) => void;
@@ -196,9 +197,10 @@ export const CoordinatorDashboardScreen: React.FC<CoordinatorDashboardScreenProp
                     <tr key={item.id}>
                       <td className="sl-td-title-ref">
                         <div className="sl-td-title-wrap-ref">
-                          <img
-                            src={item.imageUrl || '/noodles.jpg'}
-                            alt=""
+                          <ListingImage
+                            src={item.imageUrl}
+                            category={item.category}
+                            alt={item.title}
                             className="sl-td-thumb-ref"
                           />
                           <span>{item.title}</span>

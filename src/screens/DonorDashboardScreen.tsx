@@ -3,6 +3,7 @@ import { Plus, MoreVertical } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { FoodListing } from '../types/inventory';
+import { ListingImage } from '../components/ListingImage';
 
 interface DonorDashboardScreenProps {
   onNavigate: (screen: string, listingId?: string) => void;
@@ -162,8 +163,9 @@ export const DonorDashboardScreen: React.FC<DonorDashboardScreenProps> = ({ onNa
                   onClick={() => onNavigate('details', item.id)}
                 >
                   <div className="sl-product-card-image-box-ref">
-                    <img
-                      src={item.imageUrl || '/noodles.jpg'}
+                    <ListingImage
+                      src={item.imageUrl}
+                      category={item.category}
                       alt={item.title}
                       className="sl-product-card-image-ref"
                     />

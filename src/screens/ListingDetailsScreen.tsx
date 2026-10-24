@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { FoodListing } from '../types/inventory';
+import { ListingImage } from '../components/ListingImage';
+import { resolveListingImageUrl } from '../utils/imageUtils';
 
 interface ListingDetailsScreenProps {
   listingId?: string;
@@ -43,8 +45,9 @@ export const ListingDetailsScreen: React.FC<ListingDetailsScreenProps> = ({
                  json.data[0])
               : json.data;
             setListing(data);
-            if (data?.imageUrl) {
-              setSelectedImage(data.imageUrl);
+            if (data) {
+              const safeUrl = resolveListingImageUrl(data.imageUrl, data.category);
+              setSelectedImage(safeUrl);
             }
           }
         }
@@ -88,6 +91,7 @@ export const ListingDetailsScreen: React.FC<ListingDetailsScreenProps> = ({
   };
 
   const isUrgent = activeItem.urgencyBand === 'urgent' || activeItem.urgencyBand === 'critical';
+  const primaryItemImage = resolveListingImageUrl(activeItem.imageUrl, activeItem.category);
 
   return (
     <div className="sl-details-page-ref">
@@ -114,9 +118,10 @@ export const ListingDetailsScreen: React.FC<ListingDetailsScreenProps> = ({
             {/* Left Column: Image Gallery */}
             <div className="sl-details-gallery-ref">
               <div className="sl-details-main-image-card-ref">
-                <img
-                  src={selectedImage || activeItem.imageUrl || '/noodles.jpg'}
+                <ListingImage
+                  src={selectedImage || primaryItemImage}
                   alt={activeItem.title}
+                  category={activeItem.category}
                   className="sl-details-main-img-ref"
                 />
               </div>
@@ -125,12 +130,13 @@ export const ListingDetailsScreen: React.FC<ListingDetailsScreenProps> = ({
               <div className="sl-details-thumbs-row-ref">
                 <button
                   type="button"
-                  className={`sl-details-thumb-btn-ref ${selectedImage === (activeItem.imageUrl || '/noodles.jpg') ? 'sl-details-thumb-btn-ref--active' : ''}`}
-                  onClick={() => setSelectedImage(activeItem.imageUrl || '/noodles.jpg')}
+                  className={`sl-details-thumb-btn-ref ${selectedImage === primaryItemImage ? 'sl-details-thumb-btn-ref--active' : ''}`}
+                  onClick={() => setSelectedImage(primaryItemImage)}
                 >
-                  <img
-                    src={activeItem.imageUrl || '/noodles.jpg'}
+                  <ListingImage
+                    src={primaryItemImage}
                     alt="Product packaging angle 1"
+                    category={activeItem.category}
                     className="sl-details-thumb-img-ref"
                   />
                 </button>
@@ -140,9 +146,10 @@ export const ListingDetailsScreen: React.FC<ListingDetailsScreenProps> = ({
                   className={`sl-details-thumb-btn-ref ${selectedImage === '/sample-food-label-crisp.jpg' ? 'sl-details-thumb-btn-ref--active' : ''}`}
                   onClick={() => setSelectedImage('/sample-food-label-crisp.jpg')}
                 >
-                  <img
+                  <ListingImage
                     src="/sample-food-label-crisp.jpg"
                     alt="Food date label macro shot"
+                    category={activeItem.category}
                     className="sl-details-thumb-img-ref"
                   />
                 </button>

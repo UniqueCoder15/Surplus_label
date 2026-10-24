@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { FoodListing } from '../types/inventory';
 import { useAuth } from '../context/AuthContext';
+import { ListingImage } from './ListingImage';
 
 interface ClaimDonationModalProps {
   listing: FoodListing | null;
@@ -345,17 +346,12 @@ export const ClaimDonationModal: React.FC<ClaimDonationModalProps> = ({
             <form onSubmit={handleSubmit} className="sl-claim-form">
               {/* Food Listing Preview inside Modal */}
               <div className="sl-claim-item-summary">
-                {listing.imageUrl ? (
-                  <img
-                    src={listing.imageUrl}
-                    alt={listing.title}
-                    className="sl-claim-item-summary__img"
-                  />
-                ) : (
-                  <div className="sl-claim-item-summary__placeholder">
-                    <Package size={24} className="sl-text-muted" />
-                  </div>
-                )}
+                <ListingImage
+                  src={listing.imageUrl}
+                  category={listing.category}
+                  alt={listing.title}
+                  className="sl-claim-item-summary__img"
+                />
                 <div className="sl-claim-item-summary__details">
                   <div className="sl-claim-item-summary__header-row">
                     <span className="sl-badge sl-badge--sm sl-badge--primary">
