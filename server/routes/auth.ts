@@ -137,8 +137,8 @@ router.post('/logout', (_req: Request, res: Response) => {
  * POST /api/auth/reset-demo
  * Resets user database to seeded demo accounts.
  */
-router.post('/reset-demo', (_req: Request, res: Response) => {
-  authService.resetToDemo();
+router.post('/reset-demo', async (_req: Request, res: Response) => {
+  await authService.resetToDemo();
   res.json({
     success: true,
     message: 'User credentials reset to initial demo accounts.',

@@ -1,7 +1,6 @@
 import http from 'http';
 import app from '../index';
-import { listingStore } from '../services/listingStore';
-import { authService } from '../services/authService';
+import { setupIntegrationTestDatabase, teardownIntegrationTestDatabase } from './testDb';
 
 let server: http.Server;
 let port: number;
@@ -70,7 +69,8 @@ async function runAuthAndOwnershipTests() {
   let passed = 0;
   let total = 0;
 
-  // Start test server on dynamic port
+  await setupIntegrationTestDatabase();
+
   await new Promise<void>((resolve) => {
     server = app.listen(0, '127.0.0.1', () => {
       const address = server.address() as any;
@@ -80,10 +80,6 @@ async function runAuthAndOwnershipTests() {
   });
 
   try {
-    // Reset listing store and demo accounts
-    listingStore.resetToDemo();
-    authService.resetToDemo();
-
     // ==========================================
     // 1. REGISTRATION & VALIDATION TESTS
     // ==========================================
@@ -560,6 +556,7 @@ async function runAuthAndOwnershipTests() {
     console.log(`====================================================\n`);
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
+    await teardownIntegrationTestDatabase();
   }
 }
 

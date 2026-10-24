@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { Readable } from 'stream';
 import { uploadMiddleware, validateImageSignature } from '../middleware/upload';
 import { cloudinary, isCloudinaryConfigured } from '../cloudinary';
+import { isMongoConnected } from '../db/connection';
 
 const router = Router();
 
@@ -19,9 +20,8 @@ router.get('/health', (_req: Request, res: Response) => {
     environment: process.env.NODE_ENV || 'development',
     uptimeSeconds: Math.floor(process.uptime()),
     persistence: {
-      type: 'filesystem-json',
-      storageDir: 'server/data',
-      status: 'active',
+      type: 'mongodb-atlas',
+      status: isMongoConnected() ? 'connected' : 'disconnected',
     },
     ocrEngine: {
       engine: 'tesseract.js',

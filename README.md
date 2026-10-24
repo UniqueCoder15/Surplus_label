@@ -46,7 +46,10 @@ Large volumes of safe packaged food are discarded by hostels, caterers, grocery 
   - bcryptjs (password hashing, 10 rounds) & jsonwebtoken (JWT sessions)
   - cookie-parser & cors
 - **Persistence**:
-  - File-backed atomic JSON storage (`server/data/listings.json` and `users.json`) with atomic file swapping (`fs.renameSync`) to ensure zero partial-write corruption.
+  - MongoDB Atlas via Mongoose (`MONGODB_URI`) for users, password hashes, listings, and embedded claim records.
+  - Unique indexes on user `id` and `email`, listing `id`, plus compound indexes for browse/filter queries.
+  - Optional one-time JSON import: `npm run migrate:mongo` (reads legacy `server/data/*.json`).
+  - Explicit demo seed (not run on startup): `npm run seed:demo`.
 - **Testing**:
   - Custom automated integration and unit test runners with zero external test runner bloat (`tsx`).
 
@@ -65,7 +68,10 @@ surplus-label/
 │   └── design-system/         # Design tokens, components & accessibility
 ├── public/                    # Static assets & sample food labels
 ├── server/                    # Node.js + Express backend
-│   ├── data/                  # Persistent JSON storage (listings & users)
+│   ├── data/                  # Legacy JSON snapshots & demo seed definitions
+│   ├── db/                    # MongoDB connection singleton
+│   ├── models/                # Mongoose schemas (User, Listing)
+│   ├── scripts/               # migrateJsonToMongo.ts, seedDemo.ts
 │   ├── middleware/            # Auth gates, RBAC, and Multer upload validation
 │   ├── ocr/                   # Tesseract.js worker engine & heuristics
 │   ├── routes/                # API route handlers (auth, listings, ocr, upload)
@@ -114,7 +120,9 @@ surplus-label/
    ```bash
    cp .env.example server/.env
    ```
-   *Note:* The application functions out of the box with built-in demo credentials. To test live Cloudinary image uploads, add your Cloudinary credentials to `server/.env`.
+   Set `MONGODB_URI` to your MongoDB Atlas connection string (required for auth and listings).  
+   For local demos, run `npm run seed:demo` once to load clearly labeled demo accounts (password `DemoPass123!`).  
+   Cloudinary credentials are optional until you test live image uploads.
 
 4. **Start the development environment**:
    ```bash
@@ -135,6 +143,8 @@ surplus-label/
 | `npm run build` | Compiles frontend TypeScript & Vite bundle | Emits to `dist/` |
 | `npm start` | Runs production Express server | `http://localhost:5050` |
 | `npm run typecheck:server` | Typechecks backend TypeScript | Uses `server/tsconfig.json` |
+| `npm run db:migrate` | Migrates legacy JSON records into MongoDB Atlas | Requires `MONGODB_URI` |
+| `npm run db:seed` | Explicitly seeds demo users and sample listings | Requires `MONGODB_URI` |
 | `npm test` | Executes all 5 automated test suites | 158 assertions |
 
 ---

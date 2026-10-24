@@ -10,7 +10,7 @@ const router = Router();
  * Fetch food listings with search, category, status, urgency filters, and summary metrics.
  * Sanitizes sensitive handover details (PIN, recipient phone/notes) unless user is authorized.
  */
-router.get('/', authenticate, (req: Request, res: Response) => {
+router.get('/', authenticate, async (req: Request, res: Response) => {
   try {
     const filters: ListingFilters = {
       search: typeof req.query.search === 'string' ? req.query.search : undefined,
@@ -20,7 +20,7 @@ router.get('/', authenticate, (req: Request, res: Response) => {
       sortBy: (typeof req.query.sortBy === 'string' ? req.query.sortBy : undefined) as any,
     };
 
-    const result = listingStore.getAll(filters, req.user);
+    const result = await listingStore.getAll(filters, req.user);
 
     res.json({
       success: true,
@@ -41,10 +41,10 @@ router.get('/', authenticate, (req: Request, res: Response) => {
  * GET /api/listings/:id
  * Retrieve details for a single food listing with sensitive data scrubbing.
  */
-router.get('/:id', authenticate, (req: Request, res: Response) => {
+router.get('/:id', authenticate, async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
-    const listing = listingStore.getById(id, req.user);
+    const listing = await listingStore.getById(id, req.user);
 
     if (!listing) {
       return res.status(404).json({
@@ -72,7 +72,7 @@ router.get('/:id', authenticate, (req: Request, res: Response) => {
  * Protected: Requires authentication as 'donor' or 'admin'.
  * Strict requirement: human supervisor verification sign-off is mandatory.
  */
-router.post('/', requireAuth, requireRole('donor', 'admin'), (req: Request, res: Response) => {
+router.post('/', requireAuth, requireRole('donor', 'admin'), async (req: Request, res: Response) => {
   try {
     const user = req.user!;
     const {
@@ -198,7 +198,7 @@ router.post('/', requireAuth, requireRole('donor', 'admin'), (req: Request, res:
       });
     }
 
-    const created = listingStore.create(
+    const created = await listingStore.create(
       {
         donorUserId: user.id,
         title: title.trim(),
@@ -242,7 +242,7 @@ router.post('/', requireAuth, requireRole('donor', 'admin'), (req: Request, res:
  * Protected: Requires authentication as 'recipient' or 'admin'.
  * Prevents conflicting claims (HTTP 409 Conflict if not currently available).
  */
-router.patch('/:id/claim', requireAuth, requireRole('recipient', 'admin'), (req: Request, res: Response) => {
+router.patch('/:id/claim', requireAuth, requireRole('recipient', 'admin'), async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
     const user = req.user!;
@@ -296,7 +296,7 @@ router.patch('/:id/claim', requireAuth, requireRole('recipient', 'admin'), (req:
       });
     }
 
-    const claimed = listingStore.claim(
+    const claimed = await listingStore.claim(
       id,
       {
         recipientUserId: user.id,
@@ -330,7 +330,7 @@ router.patch('/:id/claim', requireAuth, requireRole('recipient', 'admin'), (req:
  * Transition listing status (available, claimed, collected, cancelled).
  * Protected: Requires authentication. Enforces donor ownership / recipient claim release / admin.
  */
-router.patch('/:id/status', requireAuth, (req: Request, res: Response) => {
+router.patch('/:id/status', requireAuth, async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
     const { status, notes } = req.body;
@@ -343,7 +343,7 @@ router.patch('/:id/status', requireAuth, (req: Request, res: Response) => {
       });
     }
 
-    const updated = listingStore.updateStatus(id, status, req.user, notes);
+    const updated = await listingStore.updateStatus(id, status, req.user, notes);
 
     res.json({
       success: true,
@@ -363,10 +363,10 @@ router.patch('/:id/status', requireAuth, (req: Request, res: Response) => {
  * POST /api/listings/reset-demo
  * Reset data file to default clearly labeled demo entries (for test suites and demos).
  */
-router.post('/reset-demo', (_req: Request, res: Response) => {
+router.post('/reset-demo', async (_req: Request, res: Response) => {
   try {
-    listingStore.resetToDemo();
-    const result = listingStore.getAll();
+    await listingStore.resetToDemo();
+    const result = await listingStore.getAll();
     res.json({
       success: true,
       message: 'Listings reset to initial demo dataset.',

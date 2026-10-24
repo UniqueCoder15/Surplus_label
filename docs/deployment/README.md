@@ -23,14 +23,14 @@ SurplusLabel is an end-to-end surplus food donation coordination and packaging-v
 │   • Input Validation & Calendar Date Logic             │
 └────────────┬──────────────┬──────────────┬─────────────┘
              │              │              │
-    Image Streams     OCR Pipeline    JSON Storage
+    Image Streams     OCR Pipeline    MongoDB Atlas
              │              │              │
 ┌────────────▼──────┐ ┌─────▼────────┐ ┌───▼─────────────┐
-│ Cloudinary CDN    │ │ Tesseract.js │ │ Persistent Disk │
-│ • Food-label      │ │ • Server-side│ │ • Atomic rename │
-│   photos          │ │   OCR engine │ │   safe writes   │
-│ • Secure assets   │ │ • Date regex │ │ • listings.json │
-│   management      │ │   heuristics │ │ • users.json    │
+│ Cloudinary CDN    │ │ Tesseract.js │ │ Mongoose ODM    │
+│ • Food-label      │ │ • Server-side│ │ • users         │
+│   photos          │ │   OCR engine │ │ • listings      │
+│ • Secure assets   │ │ • Date regex │ │ • claim embeds  │
+│   management      │ │   heuristics │ │ • unique indexes│
 └───────────────────┘ └──────────────┘ └─────────────────┘
 ```
 
@@ -56,14 +56,15 @@ Before deploying SurplusLabel to staging or production, execute this sequential 
 
 - [ ] **Dependency Installation**: Run `npm install` to ensure all production and build dependencies are present.
 - [ ] **Environment Isolation**: Ensure `.env` and `server/.env` are listed in `.gitignore` and never committed to version control.
-- [ ] **Production Environment Variables**: Populate `PORT`, `NODE_ENV=production`, `CLIENT_ORIGIN`, `JWT_SECRET` (32+ chars), and Cloudinary credentials.
+- [ ] **Production Environment Variables**: Populate `PORT`, `NODE_ENV=production`, `MONGODB_URI`, `CLIENT_ORIGIN`, `JWT_SECRET` (32+ chars), and Cloudinary credentials.
 - [ ] **Typecheck Verification**:
   - Run `npm run typecheck:server` to verify backend TypeScript.
   - Run `npx tsc --noEmit` to verify frontend TypeScript.
 - [ ] **Production Build**: Run `npm run build` to compile the Vite production bundle into `dist/`.
 - [ ] **Automated Test Suite**: Run `npm test` to verify all 158 tests pass (date parsing, OCR, listings API, auth RBAC, reservation regression).
 - [ ] **Health Endpoint Check**: Verify `GET /api/health` and `GET /health` return `status: "ok"`.
-- [ ] **Persistent Volume Mount**: For containerized hosting, ensure `server/data/` is mapped to a persistent volume or disk.
+- [ ] **MongoDB Atlas Network Access**: Allow Render (or your host) egress IPs / `0.0.0.0/0` for development clusters; verify database user has read/write on the app database.
+- [ ] **Data Migration (if upgrading)**: Run `npm run migrate:mongo` once to import legacy `server/data/*.json` into Atlas.
 
 ---
 
@@ -107,9 +108,6 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/public ./public
 
-# Create persistent storage directory
-RUN mkdir -p /app/server/data
-
 EXPOSE 5050
 CMD ["npm", "start"]
 ```
@@ -118,12 +116,16 @@ CMD ["npm", "start"]
 
 ## 5. Persistence Requirements
 
-SurplusLabel persists users and food listings to local atomic JSON files located at:
-- `server/data/users.json`
-- `server/data/listings.json`
+SurplusLabel persists users, password hashes, listings, and claim details in **MongoDB Atlas** using the `MONGODB_URI` environment variable.
 
-### File Integrity Guarantee:
-Updates write to an ephemeral temporary file (`.tmp.<timestamp>`) and swap atomically via `fs.renameSync()`, preventing partial writes or database corruption.
+### Setup Steps
+1. Create a MongoDB Atlas cluster and database user with read/write access.
+2. Add the SRV connection string to Render (or `server/.env` locally) as `MONGODB_URI`.
+3. (Optional) Import legacy JSON: `npm run migrate:mongo` reads `server/data/users.json` and `server/data/listings.json`.
+4. (Optional) Load demo accounts for exhibitions: `npm run seed:demo` (password `DemoPass123!` for all demo users).
 
-### Cloud Storage Rule:
-On ephemeral platforms where container filesystems reset on redeploy (e.g., standard Heroku, ephemeral AWS Lambda, basic Render without disk), a **Persistent Disk** must be attached and mounted at `/app/server/data`.
+### Indexes & Constraints
+- Users: unique `id` and `email`; compound `{ role, email }`.
+- Listings: unique `id`; compound filters on `{ status, urgencyBand }`, `{ category, status }`, `{ donorOrg, createdAt }`.
+
+The server does **not** auto-seed or reset the database on startup.

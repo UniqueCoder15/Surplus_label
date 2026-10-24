@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User, UserRole, RegisterFormData, LoginFormData, AuthResponse } from '../types/auth';
+import { getApiUrl } from '../utils/api';
 
 interface AuthContextType {
   user: User | null;
@@ -48,10 +49,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers.set('Authorization', `Bearer ${currentToken}`);
       }
 
-      const response = await fetch(url, {
+      const targetUrl = getApiUrl(url);
+
+      const response = await fetch(targetUrl, {
         ...init,
         headers,
-        credentials: 'same-origin',
+        credentials: 'include',
       });
 
       if (response.status === 401 && !url.includes('/api/auth/login')) {
@@ -79,9 +82,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           headers['Authorization'] = `Bearer ${savedToken}`;
         }
 
-        const res = await fetch('/api/auth/me', {
+        const res = await fetch(getApiUrl('/api/auth/me'), {
           headers,
-          credentials: 'same-origin',
+          credentials: 'include',
         });
 
         if (res.ok) {
@@ -111,10 +114,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (data: LoginFormData): Promise<{ success: boolean; error?: string }> => {
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(getApiUrl('/api/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
+        credentials: 'include',
         body: JSON.stringify(data),
       });
 
@@ -142,10 +145,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (data: RegisterFormData): Promise<{ success: boolean; error?: string }> => {
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(getApiUrl('/api/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
+        credentials: 'include',
         body: JSON.stringify(data),
       });
 
@@ -173,9 +176,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async (): Promise<void> => {
     try {
-      await fetch('/api/auth/logout', {
+      await fetch(getApiUrl('/api/auth/logout'), {
         method: 'POST',
-        credentials: 'same-origin',
+        credentials: 'include',
       });
     } catch (err) {
       console.error('Logout error:', err);
@@ -207,6 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthModalRolePreset(presetRole);
     setAuthModalNotice(notice);
     setIsAuthModalOpen(true);
+    window.location.hash = '#/auth';
   };
 
   const closeAuthModal = () => {

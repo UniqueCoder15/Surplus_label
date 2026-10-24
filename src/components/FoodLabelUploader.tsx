@@ -16,6 +16,7 @@ import {
   FoodLabelVerificationGateway,
   VerifiedFoodLabelData,
 } from './FoodLabelVerificationGateway';
+import { getApiUrl } from '../utils/api';
 
 export interface UploadResult {
   url: string;
@@ -63,7 +64,7 @@ export const FoodLabelUploader: React.FC<FoodLabelUploaderProps> = ({
   // Check backend health and Cloudinary configuration status on mount
   useEffect(() => {
     let isMounted = true;
-    fetch('/api/health')
+    fetch(getApiUrl('/api/health'))
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => {
         if (isMounted && data?.cloudinary) {
@@ -181,9 +182,10 @@ export const FoodLabelUploader: React.FC<FoodLabelUploaderProps> = ({
     formData.append('image', file);
 
     try {
-      const response = await fetch('/api/uploads/food-label', {
+      const response = await fetch(getApiUrl('/api/uploads/food-label'), {
         method: 'POST',
         body: formData,
+        credentials: 'include',
       });
 
       clearInterval(progressInterval);

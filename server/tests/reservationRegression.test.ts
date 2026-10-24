@@ -1,7 +1,7 @@
 /**
  * SurplusLabel - Reservation & Claim Workflow Regression Test Suite
  *
- * Specifically verifies Task 13 requirements:
+ * Comprehensive regression test suite verifying core business requirements:
  * 1. Confirm Reservation endpoint payload validation & authentication gates
  * 2. Role enforcement: Only 'recipient' or 'admin' can reserve food
  * 3. Successful reservation persistence with 4-digit numeric handover PIN
@@ -17,8 +17,8 @@
 
 import http from 'http';
 import app from '../index';
-import { listingStore } from '../services/listingStore';
 import { authService } from '../services/authService';
+import { setupIntegrationTestDatabase, teardownIntegrationTestDatabase } from './testDb';
 
 let server: http.Server;
 let port: number;
@@ -85,7 +85,8 @@ async function runReservationRegressionTests() {
   let passed = 0;
   let total = 0;
 
-  // Start test server on dynamic port
+  await setupIntegrationTestDatabase();
+
   await new Promise<void>((resolve) => {
     server = app.listen(0, '127.0.0.1', () => {
       const address = server.address() as any;
@@ -95,15 +96,11 @@ async function runReservationRegressionTests() {
   });
 
   try {
-    // Reset listing store and demo accounts to clean state
-    listingStore.resetToDemo();
-    authService.resetToDemo();
-
-    const donorUser = authService.findById('usr_demo_donor_01')!;
+    const donorUser = (await authService.findById('usr_demo_donor_01'))!;
     const donorToken = authService.generateToken(donorUser);
     const donorHeaders = { Authorization: `Bearer ${donorToken}` };
 
-    const recipientUser = authService.findById('usr_demo_recipient_01')!;
+    const recipientUser = (await authService.findById('usr_demo_recipient_01'))!;
     const recipientToken = authService.generateToken(recipientUser);
     const recipientHeaders = { Authorization: `Bearer ${recipientToken}` };
 
@@ -119,7 +116,7 @@ async function runReservationRegressionTests() {
     const recipient2Token = recipient2Reg.token;
     const recipient2Headers = { Authorization: `Bearer ${recipient2Token}` };
 
-    const adminUser = authService.findById('usr_demo_admin_01')!;
+    const adminUser = (await authService.findById('usr_demo_admin_01'))!;
     const adminToken = authService.generateToken(adminUser);
     const adminHeaders = { Authorization: `Bearer ${adminToken}` };
 
@@ -384,6 +381,7 @@ async function runReservationRegressionTests() {
     console.log(`====================================================\n`);
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
+    await teardownIntegrationTestDatabase();
   }
 }
 

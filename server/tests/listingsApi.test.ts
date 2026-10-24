@@ -1,7 +1,7 @@
 import http from 'http';
 import app from '../index';
-import { listingStore } from '../services/listingStore';
 import { authService } from '../services/authService';
+import { setupIntegrationTestDatabase, teardownIntegrationTestDatabase } from './testDb';
 
 let server: http.Server;
 let port: number;
@@ -70,7 +70,8 @@ async function runListingsApiTests() {
   let passed = 0;
   let total = 0;
 
-  // Start test server on dynamic port
+  await setupIntegrationTestDatabase();
+
   await new Promise<void>((resolve) => {
     server = app.listen(0, '127.0.0.1', () => {
       const address = server.address() as any;
@@ -80,8 +81,6 @@ async function runListingsApiTests() {
   });
 
   try {
-    // Reset listing store to clean initial demo state
-    listingStore.resetToDemo();
 
     // 1. GET /api/listings
     console.log('1. Fetch Listings & Summary Metrics:');
@@ -149,11 +148,11 @@ async function runListingsApiTests() {
 
     // 4. POST /api/listings Validation Gates
     console.log('\n4. Listing Creation & Strict Human Verification Enforcement:');
-    const demoDonor = authService.findById('usr_demo_donor_01')!;
+    const demoDonor = (await authService.findById('usr_demo_donor_01'))!;
     const donorToken = authService.generateToken(demoDonor);
     const donorHeaders = { Authorization: `Bearer ${donorToken}` };
 
-    const demoRecipient = authService.findById('usr_demo_recipient_01')!;
+    const demoRecipient = (await authService.findById('usr_demo_recipient_01'))!;
     const recipientToken = authService.generateToken(demoRecipient);
     const recipientHeaders = { Authorization: `Bearer ${recipientToken}` };
 
@@ -318,6 +317,7 @@ async function runListingsApiTests() {
     console.log(`====================================================\n`);
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
+    await teardownIntegrationTestDatabase();
   }
 }
 

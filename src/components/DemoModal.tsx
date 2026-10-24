@@ -23,6 +23,7 @@ import {
   calculateUrgency,
 } from '../utils/ocrDateParser';
 import { VerifiedFoodLabelData } from './FoodLabelVerificationGateway';
+import { getApiUrl } from '../utils/api';
 
 interface DemoModalProps {
   isOpen: boolean;
@@ -103,9 +104,10 @@ export const DemoModal: React.FC<DemoModalProps> = ({
       const form = new FormData();
       form.append('image', blob, 'sample-food-label-crisp.jpg');
 
-      const ocrRes = await fetch('/api/ocr/food-label', {
+      const ocrRes = await fetch(getApiUrl('/api/ocr/food-label'), {
         method: 'POST',
         body: form,
+        credentials: 'include',
       });
       const data = await ocrRes.json();
       if (data.success && data.data.candidates && data.data.candidates.length > 0) {

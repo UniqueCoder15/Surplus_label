@@ -26,6 +26,7 @@ import {
   isValidCalendarDate,
   formatDisplayDate,
 } from '../utils/ocrDateParser';
+import { getApiUrl } from '../utils/api';
 
 export interface VerifiedFoodLabelData {
   verifiedDate: string; // YYYY-MM-DD
@@ -108,9 +109,10 @@ export const FoodLabelVerificationGateway: React.FC<FoodLabelVerificationGateway
     formData.append('image', fileToScan);
 
     try {
-      const response = await fetch('/api/ocr/food-label', {
+      const response = await fetch(getApiUrl('/api/ocr/food-label'), {
         method: 'POST',
         body: formData,
+        credentials: 'include',
       });
 
       clearInterval(progressTimer);

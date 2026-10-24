@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService, SafeUser, UserRole } from '../services/authService';
 
-// Extend Express Request interface to include optional user
 declare global {
   namespace Express {
     interface Request {
@@ -10,16 +9,11 @@ declare global {
   }
 }
 
-/**
- * Extracts JWT token from either HttpOnly cookie or Authorization Bearer header
- */
 export function extractToken(req: Request): string | null {
-  // 1. Check HttpOnly cookie
   if (req.cookies && req.cookies.sl_auth_token) {
     return req.cookies.sl_auth_token;
   }
 
-  // 2. Fallback to raw Cookie header if cookie-parser was not used
   const rawCookie = req.headers.cookie;
   if (rawCookie) {
     const match = rawCookie.match(/(?:^|;\s*)sl_auth_token=([^;]+)/);
@@ -28,7 +22,6 @@ export function extractToken(req: Request): string | null {
     }
   }
 
-  // 3. Check Authorization Bearer header
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     return authHeader.substring(7).trim();
@@ -37,33 +30,27 @@ export function extractToken(req: Request): string | null {
   return null;
 }
 
-/**
- * Middleware: Optional authentication.
- * Attaches user to `req.user` if valid token exists, otherwise sets `req.user = null`.
- */
-export function authenticate(req: Request, _res: Response, next: NextFunction): void {
+export async function authenticate(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const token = extractToken(req);
   if (!token) {
     req.user = null;
-    return next();
+    next();
+    return;
   }
 
   const payload = authService.verifyToken(token);
   if (!payload) {
     req.user = null;
-    return next();
+    next();
+    return;
   }
 
-  const user = authService.findById(payload.sub);
+  const user = await authService.findById(payload.sub);
   req.user = user || null;
   next();
 }
 
-/**
- * Middleware: Mandatory authentication.
- * Rejects unauthenticated requests with HTTP 401 Unauthorized.
- */
-export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const token = extractToken(req);
   if (!token) {
     res.status(401).json({
@@ -82,7 +69,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     return;
   }
 
-  const user = authService.findById(payload.sub);
+  const user = await authService.findById(payload.sub);
   if (!user) {
     res.status(401).json({
       success: false,
@@ -95,10 +82,6 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   next();
 }
 
-/**
- * Middleware: Role-Based Authorization Gate.
- * Enforces permissions for donor, recipient, or administrator roles.
- */
 export function requireRole(...allowedRoles: UserRole[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
